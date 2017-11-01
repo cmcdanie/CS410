@@ -409,14 +409,17 @@ public class Raytracer {
 		for(int i = 0; i < cam.getHeight(); i++) {
 			for(int j = 0; j < cam.getWidth(); j++) {
 				//System.out.println("Pixel(" + i + ", " + j + ")");
-				double percent = (double)i / (double)(cam.getWidth() - 1);
+				double percent = (double)i / (double)(cam.getHeight() - 1);
 				percent = percent * 100;
 				DecimalFormat df = new DecimalFormat("#.##");
 				if(!df.format(percent).equals(df.format(pastPercent))){
-					System.out.println("Ray Trace: " + df.format(percent) + "% Completed"); 
+					if((percent - pastPercent) >= 1 | percent == 100) {
+						System.out.println("Ray Trace: " + df.format(percent) + "% Completed"); 
+						pastPercent = percent;
+					}
 				}
 				
-				pastPercent = percent;
+				
 				//System.out.println("Pixel(" + i + ", " + j + ")");
 				//System.out.println("Right: " + cam.getRight());
 				//System.out.println("Left: " + cam.getLeft());
@@ -641,6 +644,11 @@ public class Raytracer {
 							//System.out.println("\tSN: " + sphereNormal);
 							//System.out.println("\tLv: " + Lv);
 							double NdotLv = sphereNormal.dotProduct(Lv);
+							
+							if(NdotLv < 0) {
+								NdotLv = 0;
+							}
+							
 							//System.out.println("\tNdotLv: " + NdotLv);
 							illumination = illumination.add(B.ebeMultiply(Kd).mapMultiply(NdotLv));
 						}
