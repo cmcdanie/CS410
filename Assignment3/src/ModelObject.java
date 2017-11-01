@@ -5,7 +5,11 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Scanner;
+
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
 
 public class ModelObject {
 
@@ -13,6 +17,10 @@ public class ModelObject {
 	public ArrayList<String> objTxt;		//List of lines of modelObject file
 	public ArrayList<double[]> vertices;	//List of vertices
 	public ArrayList<int[]> faces;			//List of faces
+	public String materialFile;
+	public LinkedList<MaterialObject> materials;
+	
+	
 	
 	public ModelObject(String n) throws FileNotFoundException{
 		modelName = n;
@@ -41,7 +49,7 @@ public class ModelObject {
 				
 				vertices.add(token);
 			}
-			if(words[0].equals("f")) {
+			else if(words[0].equals("f")) {
 				int[] token = new int[words.length - 1];
 				for(int i = 0; i < words.length - 1; i++) {
 					//System.out.println(words[i + 1]);
@@ -50,6 +58,34 @@ public class ModelObject {
 				}
 				faces.add(token);
 			}
+			else if(words[0].equals("mtllib")) {
+				readMaterialFile(words[1]);
+			}
+			
+			else if(words[0].equals("Ka")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				materials.get(materials.size()).setAmbient(new ArrayRealVector(token));
+			}
+			
+			else if(words[0].equals("Kd")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				materials.get(materials.size()).setDiffuse(new ArrayRealVector(token));
+			}
+			
+			else if(words[0].equals("Ks")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				materials.get(materials.size()).setSpecular(new ArrayRealVector(token));
+			}
+			
 		}
 		/*
 		for(int i = 0; i < faces.size(); i++){
@@ -59,6 +95,53 @@ public class ModelObject {
 			System.out.println(" ");
 		}
 		*/
+		scan.close();
+	}
+	
+	public void readMaterialFile(String filename) throws FileNotFoundException {
+		Scanner scan = new Scanner(new File(filename));
+		String line;
+		materials = new LinkedList<MaterialObject>();
+		
+		while(scan.hasNextLine()){
+			line = scan.nextLine();
+			String[] words = line.split("\\s");
+			
+			
+			if(words[0].equals("newmtl")) {
+				MaterialObject mtl = new MaterialObject(words[1]);
+				materials.add(mtl);
+			}
+			
+			else if(words[0].equals("Ka")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				RealVector Ka = new ArrayRealVector(token);
+				materials.getLast().setAmbient(Ka);
+				
+			}
+			
+			else if(words[0].equals("Kd")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				RealVector Kd = new ArrayRealVector(token);
+				materials.getLast().setDiffuse(Kd);
+			}
+			
+			else if(words[0].equals("Ks")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				RealVector Ks = new ArrayRealVector(token);
+				materials.getLast().setSpecular(Ks);
+			}
+		}
+		
 		scan.close();
 	}
 	
@@ -95,9 +178,14 @@ public class ModelObject {
 	public String getName() {
 		return modelName;
 	}
+	
+	public MaterialObject getMaterial(int index) {
+		return materials.get(index);
+	}
 
 	public static void main(String[] args) throws FileNotFoundException {
-		//readFile("cube.obj");
+		ModelObject a = new ModelObject("cube_centered.obj");
+		//a.readFile("cube_centered.obj");
 
 	}
 

@@ -34,13 +34,15 @@ public class Raytracer {
 	public double tMax;
 	public double betaT;
 	public double gammaT;
-	public double[] ambientLight;
+	public RealVector ambientLight;
 	public LinkedList<Light> lights;
+	//public LinkedList<RealVector> iValues;
+	public RealVector[][] iValues;
 	
 	public Raytracer(){
 		modelObjects = new LinkedList<ModelObject>();
 		modelSpheres = new LinkedList<ModelSphere>();
-		lights = new LinkedList<Light>();		
+		lights = new LinkedList<Light>();	
 	}
 	
 	//Read the Driver file line by line
@@ -124,7 +126,8 @@ public class Raytracer {
 					
 					//Lighting Related
 					case "ambient":
-						ambientLight = new double[]{Double.parseDouble(words[1]), Double.parseDouble(words[2]), Double.parseDouble(words[3])};
+						double[] Ba = new double[]{Double.parseDouble(words[1]), Double.parseDouble(words[2]), Double.parseDouble(words[3])};
+						ambientLight = new ArrayRealVector(Ba);
 						break;
 					case "light":
 						Light light = new Light();
@@ -395,6 +398,7 @@ public class Raytracer {
 		pixelG = new int[cam.getHeight()][cam.getWidth()];
 		pixelB = new int[cam.getHeight()][cam.getWidth()];
 		//tValues = new double[cam.getHeight()][cam.getWidth()];
+		iValues = new RealVector[cam.getHeight()][cam.getWidth()];
 		tMin = Double.POSITIVE_INFINITY;
 		tMax = 0.0;
 		
@@ -441,8 +445,9 @@ public class Raytracer {
 				//System.out.println("Ray: " + ray);
 				
 				double t = Double.POSITIVE_INFINITY;
+				
 				String closestType = "";
-				ModelObject closestModel = null;
+				ModelObject closestObject = null;
 				RealVector faceNormal = null;
 				RealVector intersectPt = null;
 				ModelSphere closestSphere = null;
@@ -504,7 +509,7 @@ public class Raytracer {
 										gammaT = gamma;
 										t = t1;
 										closestType = "object";
-										closestModel = modelObjects.get(k);
+										closestObject = modelObjects.get(k);
 										
 										//Calculate faceNormal
 										//A - B
@@ -581,38 +586,70 @@ public class Raytracer {
 				//System.out.println("tMin: " + tMin);
 				//tValues[i][j] = t;
 				
+				//Calculate Illumination
+				RealVector illumination= new ArrayRealVector(3);
+				
+				//System.out.println("[" + i + "][" + j + "]: ");
+				
 				if(t == Double.POSITIVE_INFINITY){
-					pixelR[i][j] = 0;
-					pixelG[i][j] = 0;
-					pixelB[i][j] = 0;
+					illumination = new ArrayRealVector(new double[]{0,0,0});
+					iValues[i][j] = illumination;
+					//System.out.println("\tival: " + illumination);
 				}
 				else {
-					//Calculate Color of pixel
 					
-					
-					
-					//Diffuse
-					//Diffuse for a face
 					if(closestType.equals("object")) {
 						//Ambient
-						pixelR[i][j] = (int) (ambientLight[0] * 255);
-						pixelG[i][j] = (int) (ambientLight[1] * 255);
-						pixelB[i][j] = (int) (ambientLight[2] * 255);
+						//Ba = ambient light from scene; Ka = ambient light from material
+						RealVector Ba = ambientLight;
+						RealVector Ka = closestObject.getMaterial(0).getAmbient();
+						illumination = Ba.ebeMultiply(Ka);
 						
+						//Diffuse
 						for(int m = 0; m < lights.size(); m++) {
+							RealVector B = ambientLight;
 							
 						}
+						
+						//Specular
+						
+						iValues[i][j] = illumination;
 					}
 					//Diffuse for a sphere
 					else if(closestType.equals("sphere")) {
 						//Ambient
-						pixelR[i][j] = (int) (closestSphere.getAmbient()[0] * ambientLight[0]);
-						pixelG[i][j] = (int) (closestSphere.getAmbient()[1] * ambientLight[1]);
-						pixelB[i][j] = (int) (closestSphere.getAmbient()[2] * ambientLight[2]);
+						//Ba = ambient light from scene; Ka = ambient light from material
+						RealVector Ba = ambientLight;
+						RealVector Ka = new ArrayRealVector(closestSphere.getDiffuse());
+						illumination = Ba.ebeMultiply(Ka);
 						
+						
+						//Diffuse
 						for(int m = 0; m < lights.size(); m++) {
+							
+							//B = brightness from light source; Kd = diffuse value from material
 							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+							RealVector Kd = new ArrayRealVector(closestSphere.getDiffuse());
+							
+							//Create LightVector 
+							//Light location - surface point location
+							RealVector Lv = new ArrayRealVector(lights.get(m).getLocation());
+							Lv = Lv.subtract(intersectPt);
+							Lv.unitize();
+							
+							//I += Bd * Kd * (N dot L)
+							//System.out.println("\tSN: " + sphereNormal);
+							//System.out.println("\tLv: " + Lv);
+							double NdotLv = sphereNormal.dotProduct(Lv);
+							//System.out.println("\tNdotLv: " + NdotLv);
+							illumination = illumination.add(B.ebeMultiply(Kd).mapMultiply(NdotLv));
 						}
+						
+						
+						//Specular
+						
+						iValues[i][j] = illumination;
+						//System.out.println("\tival: " + illumination);
 					}
 					
 					//System.out.println("Pixel[" + i + "][" + j + "]: " + pixelR[i][j]);
@@ -630,22 +667,15 @@ public class Raytracer {
 		
 		//System.out.println("tMax: " + tMax);
 		//System.out.println("tMin: " + tMin);
-		/*
+		
 		for(int i = 0; i < cam.getHeight(); i++) {
 			for(int j = 0; j < cam.getWidth(); j++) {
-				if((pixelR[i][j] == 239) && (pixelG[i][j] == 239) && (pixelB[i][j] == 239)){
-					
-				}
-				else{
-					double t = tValues[i][j];
-					double ratio = 2 * (t - tMin) / (tMax - tMin);
-					pixelR[i][j] = (int) Math.max(0, 255 * (1 - ratio));
-					pixelB[i][j] = (int) Math.max(0, 255 * (ratio - 1));
-					pixelG[i][j] = 255 - pixelB[i][j] - pixelR[i][j];
-				}
+				pixelR[i][j] = (int) (iValues[i][j].getEntry(0) * 255);
+				pixelG[i][j] = (int) (iValues[i][j].getEntry(1) * 255);
+				pixelB[i][j] = (int) (iValues[i][j].getEntry(2) * 255);
 			}
 		}
-		*/
+		
 		
 	}
 	
@@ -683,6 +713,16 @@ public class Raytracer {
 	//Main
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
+		
+		/*
+		double[] a1 = {0.1, 0.2, 0.3};
+		RealVector Ba = new ArrayRealVector(a1);
+		double[] a2 = {0.4, 0.5, 0.6};
+		RealVector Ka = new ArrayRealVector(a2);
+		RealVector ill = Ba.ebeMultiply(Ka);
+		System.out.println(ill);
+		*/
+		
 		a.readDriver(args[0]);
 		System.out.println("Completed Reading Driver file");
 		a.rayTrace();
