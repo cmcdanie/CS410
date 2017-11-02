@@ -23,9 +23,12 @@ import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.LUDecomposition;
 public class Raytracer {
 	
+	//Scene objects
 	public LinkedList<ModelObject> modelObjects;
 	public LinkedList<ModelSphere> modelSpheres;
 	public Camera cam;
+	
+	//Output
 	public int[][] pixelR;
 	public int[][] pixelG;
 	public int[][] pixelB;
@@ -34,10 +37,12 @@ public class Raytracer {
 	public double tMax;
 	public double betaT;
 	public double gammaT;
+	
+	//Lighting
 	public RealVector ambientLight;
 	public LinkedList<Light> lights;
-	//public LinkedList<RealVector> iValues;
 	public RealVector[][] iValues;
+	public double phongConstant = 16;
 	
 	public Raytracer(){
 		modelObjects = new LinkedList<ModelObject>();
@@ -524,6 +529,7 @@ public class Raytracer {
 										
 										faceNormal = cross3(AB, AC);
 										faceNormal.unitize();
+										faceNormal.mapMultiplyToSelf(-1);
 										
 										//Calculate IntersectionPt
 										AB.unitize();
@@ -561,7 +567,7 @@ public class Raytracer {
 							intersectPt = Q;
 							
 							//Calculate sphereNormal
-							sphereNormal = Q.subtract(C);
+							sphereNormal = Q.subtract(center);
 							sphereNormal.unitize();
 							
 						}
@@ -600,64 +606,169 @@ public class Raytracer {
 					//System.out.println("\tival: " + illumination);
 				}
 				else {
-					
+					//Lighting for Objects
 					if(closestType.equals("object")) {
 						//Ambient
 						//Ba = ambient light from scene; Ka = ambient light from material
 						RealVector Ba = ambientLight;
 						RealVector Ka = closestObject.getMaterial(0).getAmbient();
-						illumination = Ba.ebeMultiply(Ka);
+						RealVector Ia = Ba.ebeMultiply(Ka);
 						
 						//Diffuse
+						RealVector Id = new ArrayRealVector(3);
 						for(int m = 0; m < lights.size(); m++) {
-							RealVector B = ambientLight;
+							//B = brightness from light source; Kd = diffuse value from material
+							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+							RealVector Kd = closestObject.getMaterial(0).getDiffuse();
+							
+							//Create LightVector 
+							//Light location - surface point location
+							RealVector L = new ArrayRealVector(lights.get(m).getLocation());
+							RealVector test = L;
+							L = L.subtract(intersectPt);
+							L.unitize();
+							
+							//I += Bd * Kd * (N dot L)
+							//System.out.println("\tSN: " + sphereNormal);
+							//System.out.println("\tLv: " + L);
+							double NdotL = faceNormal.dotProduct(L);
+							
+							//if(NdotL < 0) {
+							//	NdotL = -1 * NdotL;
+							//}
+							
+							//System.out.println("\tNdotLv: " + NdotLv);
+							Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
+							
 							
 						}
 						
 						//Specular
+						RealVector Is = new ArrayRealVector(3);
+						for(int m = 0; m < lights.size(); m++) {
+							
+							
+							//B = brightness from light source; Kd = diffuse value from material
+							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+							RealVector Ks = new ArrayRealVector(closestObject.getMaterial(0).getSpecular());
+							
+							//Create LightVector 
+							//Light location - surface point location
+							RealVector L = new ArrayRealVector(lights.get(m).getLocation());
+							L = L.subtract(intersectPt);
+							L.unitize();
+							
+							//Create Reflection Vector
+							double NdotL = faceNormal.dotProduct(L);
+							if(NdotL < 0) {
+								faceNormal.mapMultiplyToSelf(-1);
+								NdotL = faceNormal.dotProduct(L);
+							}
+							
+							RealVector R = faceNormal.mapMultiply(2 * NdotL).subtract(L);
+							
+							//Create View Vector
+							RealVector V = cam.getEye().subtract(intersectPt);
+							V.unitize();
+							double VdotR = V.dotProduct(R);
+							
+							//System.out.println("\tNdotL: " + NdotL);
+							if(VdotR < 0) {
+								VdotR = 0;
+							}
+							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
+							
+							
+						}
 						
+						illumination = Ia;
+						illumination = illumination.add(Id);
+						illumination = illumination.add(Is);
 						iValues[i][j] = illumination;
+						//System.out.println("\tival_object: " + illumination);
 					}
-					//Diffuse for a sphere
+					
+					
+					//Lighting for Spheres
 					else if(closestType.equals("sphere")) {
 						//Ambient
 						//Ba = ambient light from scene; Ka = ambient light from material
 						RealVector Ba = ambientLight;
-						RealVector Ka = new ArrayRealVector(closestSphere.getDiffuse());
-						illumination = Ba.ebeMultiply(Ka);
+						RealVector Ka = new ArrayRealVector(closestSphere.getAmbient());
+						RealVector Ia = Ka.ebeMultiply(Ba);
 						
 						
 						//Diffuse
+						RealVector Id = new ArrayRealVector(3);
 						for(int m = 0; m < lights.size(); m++) {
+							if(i == 256 & j == 121) {
+								//System.out.println("[" + i + "][" + j + "]: ");
+							}
 							
 							//B = brightness from light source; Kd = diffuse value from material
 							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+							//System.out.println("B: " + B);
 							RealVector Kd = new ArrayRealVector(closestSphere.getDiffuse());
+							//System.out.println("Kd: " + Kd);
 							
 							//Create LightVector 
 							//Light location - surface point location
-							RealVector Lv = new ArrayRealVector(lights.get(m).getLocation());
-							Lv = Lv.subtract(intersectPt);
-							Lv.unitize();
+							RealVector L = new ArrayRealVector(lights.get(m).getLocation());
+							L = L.subtract(intersectPt);
+							L.unitize();
 							
 							//I += Bd * Kd * (N dot L)
 							//System.out.println("\tSN: " + sphereNormal);
-							//System.out.println("\tLv: " + Lv);
-							double NdotLv = sphereNormal.dotProduct(Lv);
+							//System.out.println("\tL: " + L);
+							double NdotL = sphereNormal.dotProduct(L);
 							
-							if(NdotLv < 0) {
-								NdotLv = 0;
+							if(NdotL < 0) {
+								NdotL = 0;
 							}
 							
-							//System.out.println("\tNdotLv: " + NdotLv);
-							illumination = illumination.add(B.ebeMultiply(Kd).mapMultiply(NdotLv));
+							//System.out.println("\tNdotL: " + NdotL);
+							Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
 						}
 						
 						
 						//Specular
+						RealVector Is = new ArrayRealVector(3);
+						for(int m = 0; m < lights.size(); m++) {
+							//B = brightness from light source; Kd = diffuse value from material
+							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+							RealVector Ks = new ArrayRealVector(closestSphere.getSpecular());
+							
+							//Create LightVector 
+							//Light location - surface point location
+							RealVector L = new ArrayRealVector(lights.get(m).getLocation());
+							L = L.subtract(intersectPt);
+							L.unitize();
+							
+							//I += Bd * Kd * (N dot L)
+							//System.out.println("\tSN: " + sphereNormal);
+							//System.out.println("\tL: " + L);
+							
+							//Create Reflection Vector
+							double NdotL = sphereNormal.dotProduct(L);
+							if(NdotL < 0) {
+								NdotL = 0;
+							}
+							RealVector R = sphereNormal.mapMultiply(2 * NdotL).subtract(L);
+							
+							//Create View Vector
+							RealVector V = cam.getEye().subtract(intersectPt);
+							V.unitize();
+							double VdotR = V.dotProduct(R);
+							
+							//System.out.println("\tNdotL: " + NdotL);
+							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
+						}
 						
+						illumination = Ia;
+						illumination = illumination.add(Id);
+						illumination = illumination.add(Is);
 						iValues[i][j] = illumination;
-						//System.out.println("\tival: " + illumination);
+						
 					}
 					
 					//System.out.println("Pixel[" + i + "][" + j + "]: " + pixelR[i][j]);
@@ -678,9 +789,21 @@ public class Raytracer {
 		
 		for(int i = 0; i < cam.getHeight(); i++) {
 			for(int j = 0; j < cam.getWidth(); j++) {
-				pixelR[i][j] = (int) (iValues[i][j].getEntry(0) * 255);
-				pixelG[i][j] = (int) (iValues[i][j].getEntry(1) * 255);
-				pixelB[i][j] = (int) (iValues[i][j].getEntry(2) * 255);
+				int Red = (int) (iValues[i][j].getEntry(0) * 255);
+				if(Red > 255) {
+					Red = 255;
+				}
+				int Green = (int) (iValues[i][j].getEntry(1) * 255);
+				if(Green > 255) {
+					Green = 255;
+				}
+				int Blue = (int) (iValues[i][j].getEntry(2) * 255);
+				if(Blue > 255) {
+					Blue = 255;
+				}
+				pixelR[i][j] = Red;
+				pixelG[i][j] = Green;
+				pixelB[i][j] = Blue;
 			}
 		}
 		
