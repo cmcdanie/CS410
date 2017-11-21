@@ -49,7 +49,7 @@ public class Raytracer {
 		modelObjects = new LinkedList<ModelObject>();
 		modelSpheres = new LinkedList<ModelSphere>();
 		lights = new LinkedList<Light>();	
-		background = new double[] {0.5,0.5,0.5};
+		background = new double[] {0.0,0.0,0.0};
 	}
 	
 	//Read the Driver file line by line
@@ -415,7 +415,9 @@ public class Raytracer {
 		//Iterate through each pixel
 		for(int i = 0; i < cam.getHeight(); i++) {
 			for(int j = 0; j < cam.getWidth(); j++) {
+				
 				//System.out.println("Pixel(" + i + ", " + j + ")");
+				
 				double percent = (double)i / (double)(cam.getHeight() - 1);
 				percent = percent * 100;
 				DecimalFormat df = new DecimalFormat("#.##");
@@ -466,17 +468,14 @@ public class Raytracer {
 				//Iterate through all objects
 				for(int k = 0; k < modelObjects.size(); k++) {
 					//System.out.println("Current Object: " + modelObjects.get(k).getName());
+					
 					//Iterate through faces
 					for(int l = 0; l < modelObjects.get(k).getNumOfFaces(); l++) {
 						
-						/*
-						if(i == 102 && j == 102){
-							System.out.println("Current Face: " + (l + 1));
-						}
-						*/
-						
 						int[] face = modelObjects.get(k).getFace(l);
-						//System.out.println(face[0]);
+						
+						//System.out.println("Current Face: " + l);
+						
 						double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
 						double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
 						double[] ptC = modelObjects.get(k).getVertex(face[2] - 1);
@@ -523,21 +522,40 @@ public class Raytracer {
 										
 										//Calculate faceNormal
 										//A - B
-										double[] ab = {ptA[0] - ptB[0], ptA[1] - ptB[1], ptA[2] - ptB[2]};
+										double[] ab = {ptB[0] - ptA[0], ptB[1] - ptA[1], ptB[2] - ptA[2]};
 										RealVector AB = new ArrayRealVector(ab);
 										//A - C
-										double[] ac = {ptA[0] - ptC[0], ptA[1] - ptC[1], ptA[2] - ptC[2]};
+										double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
 										RealVector AC = new ArrayRealVector(ac);
 										
 										faceNormal = cross3(AB, AC);
 										faceNormal.unitize();
-										faceNormal.mapMultiplyToSelf(-1);
 										
 										//Calculate IntersectionPt
 										AB.unitize();
 										AC.unitize();
 										RealVector ptAv = new ArrayRealVector(ptA);
 										intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
+										
+										if((i == 249 & j == 249)) {
+											System.out.println("face index: " + l);
+											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
+											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
+											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+											System.out.println("AB: " + AB);
+											System.out.println("AC: " + AC);
+											System.out.println("intersectPt: " + intersectPt);
+										}
+										
+										if((i == 249 & j == 250)) {
+											System.out.println("face index: " + l);
+											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
+											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
+											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+											System.out.println("AB: " + AB);
+											System.out.println("AC: " + AC);
+											System.out.println("intersectPt: " + intersectPt);
+										}
 									}
 								}
 							}
@@ -631,13 +649,12 @@ public class Raytracer {
 							L.unitize();
 							
 							//I += Bd * Kd * (N dot L)
-							//System.out.println("\tSN: " + sphereNormal);
-							//System.out.println("\tLv: " + L);
+							//System.out.println("FaceNormal: " + faceNormal);
 							double NdotL = faceNormal.dotProduct(L);
 							
-							//if(NdotL < 0) {
-							//	NdotL = -1 * NdotL;
-							//}
+							if(NdotL < 0) {
+								NdotL = -1 * NdotL;
+							}
 							
 							//System.out.println("\tNdotLv: " + NdotLv);
 							Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
@@ -665,9 +682,11 @@ public class Raytracer {
 							if(NdotL < 0) {
 								faceNormal.mapMultiplyToSelf(-1);
 								NdotL = faceNormal.dotProduct(L);
+								//NdotL = -1 * NdotL;
 							}
 							
 							RealVector R = faceNormal.mapMultiply(2 * NdotL).subtract(L);
+							
 							
 							//Create View Vector
 							RealVector V = cam.getEye().subtract(intersectPt);
@@ -680,6 +699,30 @@ public class Raytracer {
 							}
 							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
 							
+							if(i == 249 & j == 249) {
+								System.out.println("Pixel(" + i + ", " + j + ")");
+								System.out.println("\tIntersectPt: " + intersectPt);
+								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tL: " + L);
+								System.out.println("\tNdotL: " + NdotL);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tR vector: " + R);
+								System.out.println("\tIs: " + Is);
+							}
+							
+							if(i == 249 & j == 250) {
+								System.out.println("Pixel(" + i + ", " + j + ")");
+								System.out.println("\tIntersectPt: " + intersectPt);
+								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tL: " + L);
+								System.out.println("\tNdotL: " + NdotL);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tR vector: " + R);
+								System.out.println("\tIs: " + Is);
+							}
+							
+							
+							
 							
 						}
 						
@@ -687,6 +730,7 @@ public class Raytracer {
 						illumination = illumination.add(Id);
 						illumination = illumination.add(Is);
 						iValues[i][j] = illumination;
+						//iValues[i][j] = Id;
 						//System.out.println("\tival_object: " + illumination);
 					}
 					
@@ -763,14 +807,19 @@ public class Raytracer {
 							double VdotR = V.dotProduct(R);
 							
 							//System.out.println("\tNdotL: " + NdotL);
+							if(VdotR < 0) {
+								VdotR = 0;
+							}
 							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
+							
+							
 						}
 						
 						illumination = Ia;
 						illumination = illumination.add(Id);
 						illumination = illumination.add(Is);
 						iValues[i][j] = illumination;
-						
+						//iValues[i][j] = Is;
 					}
 					
 					//System.out.println("Pixel[" + i + "][" + j + "]: " + pixelR[i][j]);
@@ -856,7 +905,14 @@ public class Raytracer {
 		System.out.println(ill);
 		*/
 		
-		a.readDriver(args[0]);
+		//a.readDriver(args[0]);
+		
+		//a.readDriver("driver00.txt");
+		//a.readDriver("driver01.txt");
+		//a.readDriver("driver02.txt");
+		//a.readDriver("driver03.txt");
+		a.readDriver("simface.txt");
+		
 		System.out.println("Completed Reading Driver file");
 		a.rayTrace();
 		System.out.println("Completed Ray Tracing");
