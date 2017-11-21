@@ -532,30 +532,34 @@ public class Raytracer {
 										faceNormal.unitize();
 										
 										//Calculate IntersectionPt
-										AB.unitize();
-										AC.unitize();
 										RealVector ptAv = new ArrayRealVector(ptA);
 										intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
 										
-										if((i == 249 & j == 249)) {
+										
+										if((i == 111 & j == 249)) {
 											System.out.println("face index: " + l);
 											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
 											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
 											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+											System.out.println("gamma: " + gamma);
+											System.out.println("beta: " + beta);
 											System.out.println("AB: " + AB);
 											System.out.println("AC: " + AC);
 											System.out.println("intersectPt: " + intersectPt);
 										}
 										
-										if((i == 249 & j == 250)) {
+										if((i == 111 & j == 250)) {
 											System.out.println("face index: " + l);
 											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
 											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
 											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+											System.out.println("gamma: " + gamma);
+											System.out.println("beta: " + beta);
 											System.out.println("AB: " + AB);
 											System.out.println("AC: " + AC);
 											System.out.println("intersectPt: " + intersectPt);
 										}
+										
 									}
 								}
 							}
@@ -674,7 +678,9 @@ public class Raytracer {
 							//Create LightVector 
 							//Light location - surface point location
 							RealVector L = new ArrayRealVector(lights.get(m).getLocation());
+							RealVector LightLoc = L;
 							L = L.subtract(intersectPt);
+							RealVector Lnonu = L.copy();
 							L.unitize();
 							
 							//Create Reflection Vector
@@ -699,28 +705,69 @@ public class Raytracer {
 							}
 							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
 							
-							if(i == 249 & j == 249) {
+							if(i == 111 & j == 248) {
 								System.out.println("Pixel(" + i + ", " + j + ")");
 								System.out.println("\tIntersectPt: " + intersectPt);
 								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tLight: " + LightLoc);
+								System.out.println("\tLnonu: " + Lnonu);
 								System.out.println("\tL: " + L);
 								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tV: "+ V);
 								System.out.println("\tR vector: " + R);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tB: " + B);
+								System.out.println("\tKs: " + Ks);
 								System.out.println("\tIs: " + Is);
 							}
 							
-							if(i == 249 & j == 250) {
+							if(i == 111 & j == 249) {
 								System.out.println("Pixel(" + i + ", " + j + ")");
 								System.out.println("\tIntersectPt: " + intersectPt);
 								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tLight: " + LightLoc);
+								System.out.println("\tLnonu: " + Lnonu);
 								System.out.println("\tL: " + L);
 								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tV: "+ V);
 								System.out.println("\tR vector: " + R);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tB: " + B);
+								System.out.println("\tKs: " + Ks);
 								System.out.println("\tIs: " + Is);
 							}
 							
+							if(i == 111 & j == 250) {
+								System.out.println("Pixel(" + i + ", " + j + ")");
+								System.out.println("\tIntersectPt: " + intersectPt);
+								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tLight: " + LightLoc);
+								System.out.println("\tLnonu: " + Lnonu);
+								System.out.println("\tL: " + L);
+								System.out.println("\tNdotL: " + NdotL);
+								System.out.println("\tV: "+ V);
+								System.out.println("\tR vector: " + R);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tB: " + B);
+								System.out.println("\tKs: " + Ks);
+								System.out.println("\tIs: " + Is);
+							}
+							
+							if(i == 111 & j == 251) {
+								System.out.println("Pixel(" + i + ", " + j + ")");
+								System.out.println("\tIntersectPt: " + intersectPt);
+								System.out.println("\tfaceNormal: " + faceNormal);
+								System.out.println("\tLight: " + LightLoc);
+								System.out.println("\tLnonu: " + Lnonu);
+								System.out.println("\tL: " + L);
+								System.out.println("\tNdotL: " + NdotL);
+								System.out.println("\tV: "+ V);
+								System.out.println("\tR vector: " + R);
+								System.out.println("\tVdotR: " + VdotR);
+								System.out.println("\tB: " + B);
+								System.out.println("\tKs: " + Ks);
+								System.out.println("\tIs: " + Is);
+							}
 							
 							
 							
@@ -729,8 +776,8 @@ public class Raytracer {
 						illumination = Ia;
 						illumination = illumination.add(Id);
 						illumination = illumination.add(Is);
-						iValues[i][j] = illumination;
-						//iValues[i][j] = Id;
+						//iValues[i][j] = illumination;
+						iValues[i][j] = Id;
 						//System.out.println("\tival_object: " + illumination);
 					}
 					
