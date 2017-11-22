@@ -5,7 +5,9 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Scanner;
 
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -17,9 +19,9 @@ public class ModelObject {
 	public ArrayList<String> objTxt;		//List of lines of modelObject file
 	public ArrayList<double[]> vertices;	//List of vertices
 	public ArrayList<int[]> faces;			//List of faces
-	public String materialFile;
-	public LinkedList<MaterialObject> materials;
-	
+	public String materialFile;					//File name of material file
+	public Map<String, MaterialObject> materials;			//List of materials found in object file
+	private Map<Integer, MaterialObject> faceMaterial;		//Map of face index to material name
 	
 	
 	public ModelObject(String n) throws FileNotFoundException{
@@ -34,6 +36,8 @@ public class ModelObject {
 		objTxt = new ArrayList<String>();
 		vertices = new ArrayList<double[]>();
 		faces = new ArrayList<int[]>();
+		faceMaterial = new HashMap<Integer, MaterialObject>();
+		String currentMtl = "";
 		
 		//Scan file
 		while(scan.hasNextLine()){
@@ -55,35 +59,17 @@ public class ModelObject {
 					//System.out.println(words[i + 1]);
 					String[] letters = words[i + 1].split("//");
 					token[i] = Integer.parseInt(letters[0]);
+					
 				}
 				faces.add(token);
+				faceMaterial.put(faces.size() - 1, materials.get(currentMtl));
 			}
 			else if(words[0].equals("mtllib")) {
 				readMaterialFile(words[1]);
 			}
 			
-			else if(words[0].equals("Ka")) {
-				double[] token = new double[words.length - 1];
-				for(int i = 0; i < words.length - 1; i++){
-					token[i] = Double.parseDouble(words[i + 1]);
-				}
-				materials.get(materials.size()).setAmbient(new ArrayRealVector(token));
-			}
-			
-			else if(words[0].equals("Kd")) {
-				double[] token = new double[words.length - 1];
-				for(int i = 0; i < words.length - 1; i++){
-					token[i] = Double.parseDouble(words[i + 1]);
-				}
-				materials.get(materials.size()).setDiffuse(new ArrayRealVector(token));
-			}
-			
-			else if(words[0].equals("Ks")) {
-				double[] token = new double[words.length - 1];
-				for(int i = 0; i < words.length - 1; i++){
-					token[i] = Double.parseDouble(words[i + 1]);
-				}
-				materials.get(materials.size()).setSpecular(new ArrayRealVector(token));
+			else if(words[0].equals("usemtl")) {
+				currentMtl = words[1];
 			}
 			
 		}
@@ -101,7 +87,8 @@ public class ModelObject {
 	public void readMaterialFile(String filename) throws FileNotFoundException {
 		Scanner scan = new Scanner(new File(filename));
 		String line;
-		materials = new LinkedList<MaterialObject>();
+		materials = new HashMap<String, MaterialObject>();
+		String currentMtl = "";
 		
 		while(scan.hasNextLine()){
 			line = scan.nextLine();
@@ -109,8 +96,9 @@ public class ModelObject {
 			
 			
 			if(words[0].equals("newmtl")) {
-				MaterialObject mtl = new MaterialObject(words[1]);
-				materials.add(mtl);
+				currentMtl = words[1];
+				MaterialObject mtl = new MaterialObject(currentMtl);
+				materials.put(currentMtl, mtl);
 			}
 			
 			else if(words[0].equals("Ka")) {
@@ -119,7 +107,7 @@ public class ModelObject {
 					token[i] = Double.parseDouble(words[i + 1]);
 				}
 				RealVector Ka = new ArrayRealVector(token);
-				materials.getLast().setAmbient(Ka);
+				materials.get(currentMtl).setAmbient(Ka);
 				
 			}
 			
@@ -129,7 +117,7 @@ public class ModelObject {
 					token[i] = Double.parseDouble(words[i + 1]);
 				}
 				RealVector Kd = new ArrayRealVector(token);
-				materials.getLast().setDiffuse(Kd);
+				materials.get(currentMtl).setDiffuse(Kd);
 			}
 			
 			else if(words[0].equals("Ks")) {
@@ -138,7 +126,7 @@ public class ModelObject {
 					token[i] = Double.parseDouble(words[i + 1]);
 				}
 				RealVector Ks = new ArrayRealVector(token);
-				materials.getLast().setSpecular(Ks);
+				materials.get(currentMtl).setSpecular(Ks);
 			}
 		}
 		
@@ -182,10 +170,14 @@ public class ModelObject {
 	public MaterialObject getMaterial(int index) {
 		return materials.get(index);
 	}
+	
+	public MaterialObject getFaceMaterial(int faceIndex) {
+		return faceMaterial.get(faceIndex);
+	}
 
 	public static void main(String[] args) throws FileNotFoundException {
-		ModelObject a = new ModelObject("cube_centered.obj");
-		//a.readFile("cube_centered.obj");
+		ModelObject a = new ModelObject("simface.obj");
+		a.readFile("cube_centered.obj");
 
 	}
 

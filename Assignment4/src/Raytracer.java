@@ -461,6 +461,7 @@ public class Raytracer {
 				String closestType = "";
 				ModelObject closestObject = null;
 				RealVector faceNormal = null;
+				int faceIndex = -1;
 				RealVector intersectPt = null;
 				ModelSphere closestSphere = null;
 				RealVector sphereNormal = null;
@@ -474,7 +475,7 @@ public class Raytracer {
 						
 						int[] face = modelObjects.get(k).getFace(l);
 						
-						//System.out.println("Current Face: " + l);
+						//System.out.println("Current Face: " + face[0] + ", " + face[1] + ", " + face[2]);
 						
 						double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
 						double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
@@ -508,12 +509,18 @@ public class Raytracer {
 							gamma = 0;
 						}
 						
+						if(i == 204 & j == 204) {
+							System.out.println("faceIndex: " + l);
+							System.out.println("\tbeta: "+ beta);
+							System.out.println("\tgamma: " + gamma);
+							System.out.println("\tT: " + t1);
+						}
 						
 						//Test if intersection is on face
 						if((beta >= 0) && (gamma >= 0)){
 							if((beta + gamma) <= 1){
 								if(t1 > 0){
-									if(t1 < t){
+									if(t1 <= t){
 										betaT = beta;
 										gammaT = gamma;
 										t = t1;
@@ -534,30 +541,11 @@ public class Raytracer {
 										//Calculate IntersectionPt
 										RealVector ptAv = new ArrayRealVector(ptA);
 										intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
+										faceIndex = l;
 										
-										
-										if((i == 111 & j == 249)) {
-											System.out.println("face index: " + l);
-											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
-											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
-											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
-											System.out.println("gamma: " + gamma);
-											System.out.println("beta: " + beta);
-											System.out.println("AB: " + AB);
-											System.out.println("AC: " + AC);
+										if(i == 204 & j == 204) {
 											System.out.println("intersectPt: " + intersectPt);
-										}
-										
-										if((i == 111 & j == 250)) {
-											System.out.println("face index: " + l);
-											System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
-											System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
-											System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
-											System.out.println("gamma: " + gamma);
-											System.out.println("beta: " + beta);
-											System.out.println("AB: " + AB);
-											System.out.println("AC: " + AC);
-											System.out.println("intersectPt: " + intersectPt);
+											System.out.println("t: " + t1);
 										}
 										
 									}
@@ -597,27 +585,7 @@ public class Raytracer {
 						}
 					}
 				}
-				//System.out.println("t: " + t);
-				//System.out.println("tMaxPre: " + tMax);
 				
-				/*
-				if((t > tMax) && !(t == Double.POSITIVE_INFINITY)){
-					tMax = t;
-				}
-				
-				if(t < tMin){
-					tMin = t;
-				}
-				*/
-				
-				//System.out.println("Pixel(" + i + ", " + j + ")");
-				//System.out.println("tMax: " + tMax);
-				//System.out.println("beta: " + betaT);
-				//System.out.println("gamma: " + gammaT);
-	
-				
-				//System.out.println("tMin: " + tMin);
-				//tValues[i][j] = t;
 				
 				//Calculate Illumination
 				RealVector illumination= new ArrayRealVector(3);
@@ -635,7 +603,7 @@ public class Raytracer {
 						//Ambient
 						//Ba = ambient light from scene; Ka = ambient light from material
 						RealVector Ba = ambientLight;
-						RealVector Ka = closestObject.getMaterial(0).getAmbient();
+						RealVector Ka = closestObject.getFaceMaterial(faceIndex).getAmbient();
 						RealVector Ia = Ba.ebeMultiply(Ka);
 						
 						//Diffuse
@@ -643,7 +611,7 @@ public class Raytracer {
 						for(int m = 0; m < lights.size(); m++) {
 							//B = brightness from light source; Kd = diffuse value from material
 							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-							RealVector Kd = closestObject.getMaterial(0).getDiffuse();
+							RealVector Kd = closestObject.getFaceMaterial(faceIndex).getDiffuse();
 							
 							//Create LightVector 
 							//Light location - surface point location
@@ -673,7 +641,7 @@ public class Raytracer {
 							
 							//B = brightness from light source; Kd = diffuse value from material
 							RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-							RealVector Ks = new ArrayRealVector(closestObject.getMaterial(0).getSpecular());
+							RealVector Ks = closestObject.getFaceMaterial(faceIndex).getSpecular();
 							
 							//Create LightVector 
 							//Light location - surface point location
@@ -705,79 +673,18 @@ public class Raytracer {
 							}
 							Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
 							
-							if(i == 111 & j == 248) {
-								System.out.println("Pixel(" + i + ", " + j + ")");
-								System.out.println("\tIntersectPt: " + intersectPt);
-								System.out.println("\tfaceNormal: " + faceNormal);
-								System.out.println("\tLight: " + LightLoc);
-								System.out.println("\tLnonu: " + Lnonu);
-								System.out.println("\tL: " + L);
-								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tV: "+ V);
-								System.out.println("\tR vector: " + R);
-								System.out.println("\tVdotR: " + VdotR);
-								System.out.println("\tB: " + B);
-								System.out.println("\tKs: " + Ks);
-								System.out.println("\tIs: " + Is);
+							if(i == 204 & j == 204) {
+								System.out.println("faceIndex: " + faceIndex);
+								System.out.println("intersectPt: " + intersectPt);
 							}
-							
-							if(i == 111 & j == 249) {
-								System.out.println("Pixel(" + i + ", " + j + ")");
-								System.out.println("\tIntersectPt: " + intersectPt);
-								System.out.println("\tfaceNormal: " + faceNormal);
-								System.out.println("\tLight: " + LightLoc);
-								System.out.println("\tLnonu: " + Lnonu);
-								System.out.println("\tL: " + L);
-								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tV: "+ V);
-								System.out.println("\tR vector: " + R);
-								System.out.println("\tVdotR: " + VdotR);
-								System.out.println("\tB: " + B);
-								System.out.println("\tKs: " + Ks);
-								System.out.println("\tIs: " + Is);
-							}
-							
-							if(i == 111 & j == 250) {
-								System.out.println("Pixel(" + i + ", " + j + ")");
-								System.out.println("\tIntersectPt: " + intersectPt);
-								System.out.println("\tfaceNormal: " + faceNormal);
-								System.out.println("\tLight: " + LightLoc);
-								System.out.println("\tLnonu: " + Lnonu);
-								System.out.println("\tL: " + L);
-								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tV: "+ V);
-								System.out.println("\tR vector: " + R);
-								System.out.println("\tVdotR: " + VdotR);
-								System.out.println("\tB: " + B);
-								System.out.println("\tKs: " + Ks);
-								System.out.println("\tIs: " + Is);
-							}
-							
-							if(i == 111 & j == 251) {
-								System.out.println("Pixel(" + i + ", " + j + ")");
-								System.out.println("\tIntersectPt: " + intersectPt);
-								System.out.println("\tfaceNormal: " + faceNormal);
-								System.out.println("\tLight: " + LightLoc);
-								System.out.println("\tLnonu: " + Lnonu);
-								System.out.println("\tL: " + L);
-								System.out.println("\tNdotL: " + NdotL);
-								System.out.println("\tV: "+ V);
-								System.out.println("\tR vector: " + R);
-								System.out.println("\tVdotR: " + VdotR);
-								System.out.println("\tB: " + B);
-								System.out.println("\tKs: " + Ks);
-								System.out.println("\tIs: " + Is);
-							}
-							
-							
 							
 						}
 						
 						illumination = Ia;
 						illumination = illumination.add(Id);
 						illumination = illumination.add(Is);
-						//iValues[i][j] = illumination;
-						iValues[i][j] = Id;
+						iValues[i][j] = illumination;
+						//iValues[i][j] = Is;
 						//System.out.println("\tival_object: " + illumination);
 					}
 					
