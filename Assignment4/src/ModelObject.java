@@ -101,6 +101,11 @@ public class ModelObject {
 				materials.put(currentMtl, mtl);
 			}
 			
+			else if(words[0].equals("Ns")) {
+				double token = Double.parseDouble(words[1]);
+				materials.get(currentMtl).setNs(token);
+			}
+			
 			else if(words[0].equals("Ka")) {
 				double[] token = new double[words.length - 1];
 				for(int i = 0; i < words.length - 1; i++){

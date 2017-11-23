@@ -7,12 +7,14 @@ public class MaterialObject {
 	public RealVector ambient;
 	public RealVector diffuse;
 	public RealVector specular;
+	public double Ns;
 	
 	MaterialObject(String n){
 		ambient = new ArrayRealVector(3);
 		diffuse = new ArrayRealVector(3);
 		specular = new ArrayRealVector(3);
 		materialName = n;
+		Ns = 0;
 	}
 	
 	public void setAmbient(RealVector Ka) {
@@ -27,6 +29,10 @@ public class MaterialObject {
 		specular = Ks;
 	}
 	
+	public void setNs(double ns) {
+		Ns = ns;
+	}
+	
 	public RealVector getAmbient() {
 		return ambient;
 	}
@@ -37,6 +43,10 @@ public class MaterialObject {
 	
 	public RealVector getSpecular() {
 		return specular;
+	}
+	
+	public double getNs() {
+		return Ns;
 	}
 	
 	public String getName() {
