@@ -97,6 +97,7 @@ public class Raytracer {
 						translateObj(tx, ty, tz, obj);
 						
 						modelObjects.add(obj);
+						exportObj(obj, model, filename);
 						break;
 					
 					
@@ -404,8 +405,7 @@ public class Raytracer {
 		}
 	}
 	
-	
-	
+	//
 	public void render() {
 		
 		pixelR = new int[cam.getHeight()][cam.getWidth()];
@@ -414,7 +414,6 @@ public class Raytracer {
 		iValues = new RealVector[cam.getHeight()][cam.getWidth()];
 		tMin = Double.POSITIVE_INFINITY;
 		tMax = 0.0;
-		
 		
 		double pastPercent = 0.0;
 		
@@ -463,149 +462,373 @@ public class Raytracer {
 				ray.unitize();
 				//System.out.println("Ray: " + ray);
 				
-				double t = Double.POSITIVE_INFINITY;
+				//Illumination Array
+				RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
+				RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
+				int level = 0;
+				iValues[i][j] = rayTrace(ray, pixelPt, Illum, reffatt, level);
 				
-				String closestType = "";
-				ModelObject closestObject = null;
-				RealVector faceNormal = null;
-				int faceIndex = -1;
-				RealVector intersectPt = null;
-				ModelSphere closestSphere = null;
-				RealVector sphereNormal = null;
-				
-				//Iterate through all objects
-				for(int k = 0; k < modelObjects.size(); k++) {
-					//System.out.println("Current Object: " + modelObjects.get(k).getName());
-					
-					//Iterate through faces
-					for(int l = 0; l < modelObjects.get(k).getNumOfFaces(); l++) {
-						
-						int[] face = modelObjects.get(k).getFace(l);
-						
-						//System.out.println("Current Face: " + face[0] + ", " + face[1] + ", " + face[2]);
-						
-						double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
-						double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
-						double[] ptC = modelObjects.get(k).getVertex(face[2] - 1);
-						
-						//System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
-						//System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
-						//System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
-						
-						//System.out.println("ray:dx: " + ray.getEntry(0));
-						double[][] M = {{ptA[0] - ptB[0], ptA[0] - ptC[0], ray.getEntry(0)},
-										{ptA[1] - ptB[1], ptA[1] - ptC[1], ray.getEntry(1)},
-										{ptA[2] - ptB[2], ptA[2] - ptC[2], ray.getEntry(2)}};
-						RealMatrix coefficients = new Array2DRowRealMatrix(M, false);
-						DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
-						
-						//System.out.println("eyex: " + cam.getEye().getEntry(0));
-						double[] Y = 	{ptA[0] - pixelPt.getEntry(0), 
-										 ptA[1] - pixelPt.getEntry(1), 
-										 ptA[2] - pixelPt.getEntry(2)};
-						
-						RealVector constants = new ArrayRealVector(Y, false);
-						RealVector solution = solver.solve(constants);
-						double beta = solution.getEntry(0);
-						double gamma = solution.getEntry(1);
-						double t1 = solution.getEntry(2);
-						
-						if((beta < 0) && (beta > -0.00000000001)){
-							beta = 0;
-						}
-						if((gamma < 0) && (gamma > -0.00000000001)){
-							gamma = 0;
-						}
-						
-						
-						
-						//Test if intersection is on face
-						if((beta >= 0) && (gamma >= 0)){
-							if((beta + gamma) <= 1){
-								if((t1 > 0) & (t1 <= t)){
-									betaT = beta;
-									gammaT = gamma;
-									t = t1;
-									closestType = "object";
-									closestObject = modelObjects.get(k);
-									
-									//Calculate faceNormal
-									//A - B
-									double[] ab = {ptB[0] - ptA[0], ptB[1] - ptA[1], ptB[2] - ptA[2]};
-									RealVector AB = new ArrayRealVector(ab);
-									//A - C
-									double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
-									RealVector AC = new ArrayRealVector(ac);
-									
-									faceNormal = cross3(AB, AC);
-									faceNormal.unitize();
-									
-									//Calculate IntersectionPt
-									RealVector ptAv = new ArrayRealVector(ptA);
-									intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
-									faceIndex = l;
-								}
-							}
-						}
-					}
-				}
-				//System.out.println("\n");
-				
-				
-				//Iterate through spheres
-				for(int k = 0; k < modelSpheres.size(); k++){
-					double[] cntr = modelSpheres.get(k).getCenter();
-					double radius = modelSpheres.get(k).getRadius();
-					RealVector center = new ArrayRealVector(cntr);
-					RealVector C = center.subtract(pixelPt);
-					
-					double V = C.dotProduct(ray);
-					double csq = C.dotProduct(C);
-					double disc = (radius * radius) - (csq - (V * V));
-					if(disc >= 0){
-						double d = Math.sqrt(disc);
-						RealVector Q = ray.mapMultiply(V - d);
-						Q = Q.add(pixelPt);
-						double t1 = V - d;
-						if(t1 < t){
-							t = t1;
-							closestType = "sphere";
-							closestSphere = modelSpheres.get(k);
-							intersectPt = Q;
-							
-							//Calculate sphereNormal
-							sphereNormal = Q.subtract(center);
-							sphereNormal.unitize();
-							
-						}
-					}
-				}
-				
-				
-				//Calculate Illumination
-				RealVector illumination= new ArrayRealVector(3);
-				
-				//If no objects intersected, set illumination to background value
-				if(t == Double.POSITIVE_INFINITY){
-					illumination = new ArrayRealVector(background);
-					iValues[i][j] = illumination;
-					//System.out.println("\tival: " + illumination);
-				}
-				else {
-					//Lighting for Objects
-					if(closestType.equals("object")) {
-						iValues[i][j] = objectIllumination(closestObject, faceIndex, faceNormal, intersectPt);
-					}
-					
-					//Lighting for Spheres
-					else if(closestType.equals("sphere")) {
-						iValues[i][j] = sphereIllumination(closestSphere, sphereNormal, intersectPt);
-					}
-				}
 			}
 		}
 	}
 
+	//
+	public RealVector rayTrace(RealVector ray, RealVector originPt, RealVector accum, RealVector reffatt, int level) {
+		double t = Double.POSITIVE_INFINITY;
+		
+		String closestType = "";
+		ModelObject closestObject = null;
+		RealVector faceNormal = null;
+		int faceIndex = -1;
+		RealVector intersectPt = null;
+		ModelSphere closestSphere = null;
+		RealVector sphereNormal = null;
+		int sphereIndex = -1;
+		
+		//Iterate through all objects
+		for(int k = 0; k < modelObjects.size(); k++) {
+			//System.out.println("Current Object: " + modelObjects.get(k).getName());
+			
+			//Iterate through faces
+			for(int l = 0; l < modelObjects.get(k).getNumOfFaces(); l++) {
+				
+				int[] face = modelObjects.get(k).getFace(l);
+				
+				//System.out.println("Current Face: " + face[0] + ", " + face[1] + ", " + face[2]);
+				
+				double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
+				double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
+				double[] ptC = modelObjects.get(k).getVertex(face[2] - 1);
+				
+				//System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
+				//System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
+				//System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+				
+				//System.out.println("ray:dx: " + ray.getEntry(0));
+				double[][] M = {{ptA[0] - ptB[0], ptA[0] - ptC[0], ray.getEntry(0)},
+								{ptA[1] - ptB[1], ptA[1] - ptC[1], ray.getEntry(1)},
+								{ptA[2] - ptB[2], ptA[2] - ptC[2], ray.getEntry(2)}};
+				RealMatrix coefficients = new Array2DRowRealMatrix(M, false);
+				DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
+				
+				//System.out.println("eyex: " + cam.getEye().getEntry(0));
+				double[] Y = 	{ptA[0] - originPt.getEntry(0), 
+								 ptA[1] - originPt.getEntry(1), 
+								 ptA[2] - originPt.getEntry(2)};
+				
+				RealVector constants = new ArrayRealVector(Y, false);
+				RealVector solution = solver.solve(constants);
+				double beta = solution.getEntry(0);
+				double gamma = solution.getEntry(1);
+				double t1 = solution.getEntry(2);
+				
+				if((beta < 0) && (beta > -0.00000000001)){
+					beta = 0;
+				}
+				if((gamma < 0) && (gamma > -0.00000000001)){
+					gamma = 0;
+				}
+				
+				
+				
+				//Test if intersection is on face
+				if((beta >= 0) && (gamma >= 0)){
+					if((beta + gamma) <= 1){
+						if((t1 > 0) & (t1 <= t)){
+							betaT = beta;
+							gammaT = gamma;
+							t = t1;
+							closestType = "object";
+							closestObject = modelObjects.get(k);
+							
+							//Calculate faceNormal
+							//A - B
+							double[] ab = {ptB[0] - ptA[0], ptB[1] - ptA[1], ptB[2] - ptA[2]};
+							RealVector AB = new ArrayRealVector(ab);
+							//A - C
+							double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
+							RealVector AC = new ArrayRealVector(ac);
+							
+							faceNormal = cross3(AB, AC);
+							faceNormal.unitize();
+							
+							//Calculate IntersectionPt
+							RealVector ptAv = new ArrayRealVector(ptA);
+							intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
+							faceIndex = l;
+						}
+					}
+				}
+			}
+		}
+		//System.out.println("\n");
+		
+		
+		//Iterate through spheres
+		for(int k = 0; k < modelSpheres.size(); k++){
+			double[] cntr = modelSpheres.get(k).getCenter();
+			double radius = modelSpheres.get(k).getRadius();
+			RealVector center = new ArrayRealVector(cntr);
+			RealVector C = center.subtract(originPt);
+			
+			double V = C.dotProduct(ray);
+			double csq = C.dotProduct(C);
+			double disc = (radius * radius) - (csq - (V * V));
+			if(disc >= 0){
+				double d = Math.sqrt(disc);
+				RealVector Q = ray.mapMultiply(V - d);
+				Q = Q.add(originPt);
+				double t1 = V - d;
+				if(t1 < t){
+					t = t1;
+					closestType = "sphere";
+					closestSphere = modelSpheres.get(k);
+					intersectPt = Q;
+					sphereIndex = k;
+					
+					//Calculate sphereNormal
+					sphereNormal = Q.subtract(center);
+					sphereNormal.unitize();
+					
+				}
+			}
+		}
+		
+		
+		//Calculate Illumination
+		RealVector illumination= new ArrayRealVector(3);
+		
+		//If no objects intersected, set illumination to background value
+		if(t == Double.POSITIVE_INFINITY){
+			illumination = new ArrayRealVector(background);
+			accum = illumination;
+			//System.out.println("\tival: " + illumination);
+		}
+		else {
+			//Lighting for Objects
+			if(closestType.equals("object")) {
+				accum = objectIllumination(closestObject, faceIndex, faceNormal, intersectPt);
+			}
+			
+			//Lighting for Spheres
+			else if(closestType.equals("sphere")) {
+				accum = sphereIllumination(closestSphere, sphereIndex, sphereNormal, intersectPt);
+			}
+		}
+		return accum;
+	}
+	
+	//Returns true if no object or sphere in path from intersectPt to light
+	public boolean pathToLightTest(RealVector ray, RealVector originPt, ModelObject currObj, int faceIndex) {
+		
+		double t = Double.POSITIVE_INFINITY;
+		
+		//Iterate through all objects
+		for(int k = 0; k < modelObjects.size(); k++) {
+			//System.out.println("Current Object: " + modelObjects.get(k).getName());
+			
+			//Iterate through faces
+			for(int l = 0; l < modelObjects.get(k).getNumOfFaces(); l++) {
+				
+				int[] face = modelObjects.get(k).getFace(l);
+				
+				//System.out.println("Current Face: " + face[0] + ", " + face[1] + ", " + face[2]);
+				
+				double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
+				double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
+				double[] ptC = modelObjects.get(k).getVertex(face[2] - 1);
+				
+				//System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
+				//System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
+				//System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+				
+				//System.out.println("ray:dx: " + ray.getEntry(0));
+				double[][] M = {{ptA[0] - ptB[0], ptA[0] - ptC[0], ray.getEntry(0)},
+								{ptA[1] - ptB[1], ptA[1] - ptC[1], ray.getEntry(1)},
+								{ptA[2] - ptB[2], ptA[2] - ptC[2], ray.getEntry(2)}};
+				RealMatrix coefficients = new Array2DRowRealMatrix(M, false);
+				DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
+				
+				//System.out.println("eyex: " + cam.getEye().getEntry(0));
+				double[] Y = 	{ptA[0] - originPt.getEntry(0), 
+								 ptA[1] - originPt.getEntry(1), 
+								 ptA[2] - originPt.getEntry(2)};
+				
+				RealVector constants = new ArrayRealVector(Y, false);
+				RealVector solution = solver.solve(constants);
+				double beta = solution.getEntry(0);
+				double gamma = solution.getEntry(1);
+				double t1 = solution.getEntry(2);
+				
+				if((beta < 0) && (beta > -0.00000000001)){
+					beta = 0;
+				}
+				if((gamma < 0) && (gamma > -0.00000000001)){
+					gamma = 0;
+				}
+				
+				
+				
+				//Test if intersection is on different face
+				if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
+					if((beta >= 0) && (gamma >= 0)){
+						if((beta + gamma) <= 1){
+							if((t1 > 0) & (t1 <= t)){
+								betaT = beta;
+								gammaT = gamma;
+								t = t1;
+								
+							}
+						}
+					}
+				}
+				
+				
+				if(t < Double.POSITIVE_INFINITY) {
+					//System.out.println("Path to light returned false: Object");
+					return false;
+				}
+			}
+		}
+		//System.out.println("\n");
+		
+		
+		//Iterate through spheres
+		for(int k = 0; k < modelSpheres.size(); k++){
+			double[] cntr = modelSpheres.get(k).getCenter();
+			double radius = modelSpheres.get(k).getRadius();
+			RealVector center = new ArrayRealVector(cntr);
+			RealVector C = center.subtract(originPt);
+			
+			double V = C.dotProduct(ray);
+			double csq = C.dotProduct(C);
+			double disc = (radius * radius) - (csq - (V * V));
+			if(disc >= 0){
+				double d = Math.sqrt(disc);
+				RealVector Q = ray.mapMultiply(V - d);
+				Q = Q.add(originPt);
+				double t1 = V - d;
+				if((t1 < t) & (t1 > 0)){
+					t = t1;
+					
+					
+				}
+			}
+			
+			if(t < Double.POSITIVE_INFINITY) {
+				//System.out.println("Path to light returned false: Sphere");
+				return false;
+			}
+			
+		}
+		return true;
+	}
+	
+	public boolean pathToLightTest(RealVector ray, RealVector originPt, ModelSphere currSphere) {
+		
+		double t = Double.POSITIVE_INFINITY;
+		
+		//Iterate through all objects
+		for(int k = 0; k < modelObjects.size(); k++) {
+			//System.out.println("Current Object: " + modelObjects.get(k).getName());
+			
+			//Iterate through faces
+			for(int l = 0; l < modelObjects.get(k).getNumOfFaces(); l++) {
+				
+				int[] face = modelObjects.get(k).getFace(l);
+				
+				//System.out.println("Current Face: " + face[0] + ", " + face[1] + ", " + face[2]);
+				
+				double[] ptA = modelObjects.get(k).getVertex(face[0] - 1);
+				double[] ptB = modelObjects.get(k).getVertex(face[1] - 1);
+				double[] ptC = modelObjects.get(k).getVertex(face[2] - 1);
+				
+				//System.out.println("ptA: {" + ptA[0] + "," + ptA[1] + "," + ptA[2] + "}");
+				//System.out.println("ptB: {" + ptB[0] + "," + ptB[1] + "," + ptB[2] + "}");
+				//System.out.println("ptC: {" + ptC[0] + "," + ptC[1] + "," + ptC[2] + "}");
+				
+				//System.out.println("ray:dx: " + ray.getEntry(0));
+				double[][] M = {{ptA[0] - ptB[0], ptA[0] - ptC[0], ray.getEntry(0)},
+								{ptA[1] - ptB[1], ptA[1] - ptC[1], ray.getEntry(1)},
+								{ptA[2] - ptB[2], ptA[2] - ptC[2], ray.getEntry(2)}};
+				RealMatrix coefficients = new Array2DRowRealMatrix(M, false);
+				DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
+				
+				//System.out.println("eyex: " + cam.getEye().getEntry(0));
+				double[] Y = 	{ptA[0] - originPt.getEntry(0), 
+								 ptA[1] - originPt.getEntry(1), 
+								 ptA[2] - originPt.getEntry(2)};
+				
+				RealVector constants = new ArrayRealVector(Y, false);
+				RealVector solution = solver.solve(constants);
+				double beta = solution.getEntry(0);
+				double gamma = solution.getEntry(1);
+				double t1 = solution.getEntry(2);
+				
+				if((beta < 0) && (beta > -0.00000000001)){
+					beta = 0;
+				}
+				if((gamma < 0) && (gamma > -0.00000000001)){
+					gamma = 0;
+				}
+				
+				
+				
+				//Test if intersection is on face
+				if((beta >= 0) && (gamma >= 0)){
+					if((beta + gamma) <= 1){
+						if((t1 > 0) & (t1 <= t)){
+							betaT = beta;
+							gammaT = gamma;
+							t = t1;
+							
+						}
+					}
+				}
+				
+				
+				if(t < Double.POSITIVE_INFINITY) {
+					//System.out.println("Path to light returned false: Object");
+					return false;
+				}
+			}
+		}
+		//System.out.println("\n");
+		
+		
+		//Iterate through spheres
+		for(int k = 0; k < modelSpheres.size(); k++){
+			if(modelSpheres.get(k) != currSphere) {
+				double[] cntr = modelSpheres.get(k).getCenter();
+				double radius = modelSpheres.get(k).getRadius();
+				RealVector center = new ArrayRealVector(cntr);
+				RealVector C = center.subtract(originPt);
+				
+				double V = C.dotProduct(ray);
+				double csq = C.dotProduct(C);
+				double disc = (radius * radius) - (csq - (V * V));
+				if(disc >= 0){
+					double d = Math.sqrt(disc);
+					RealVector Q = ray.mapMultiply(V - d);
+					Q = Q.add(originPt);
+					double t1 = V - d;
+					if((t1 < t) & (t1 > 0)){
+						t = t1;
+						
+						
+					}
+				}
+			}
+			
+			if(t < Double.POSITIVE_INFINITY) {
+				//System.out.println("Path to light returned false: Sphere");
+				return false;
+			}
+			
+		}
+		return true;
+	}
+	
 	//Calculates Illumination value for an object
 	public RealVector objectIllumination(ModelObject closestObject, int faceIndex, RealVector faceNormal, RealVector intersectPt) {
 		//Ambient
@@ -617,9 +840,6 @@ public class Raytracer {
 		//Diffuse
 		RealVector Id = new ArrayRealVector(3);
 		for(int m = 0; m < lights.size(); m++) {
-			//B = brightness from light source; Kd = diffuse value from material
-			RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-			RealVector Kd = closestObject.getFaceMaterial(faceIndex).getDiffuse();
 			
 			//Create LightVector 
 			//Light location - surface point location
@@ -627,17 +847,22 @@ public class Raytracer {
 			L = L.subtract(intersectPt);
 			L.unitize();
 			
-			//I += Bd * Kd * (N dot L)
-			//System.out.println("FaceNormal: " + faceNormal);
-			double NdotL = faceNormal.dotProduct(L);
-			
-			if(NdotL < 0) {
-				NdotL = -1 * NdotL;
+			if(pathToLightTest(L, intersectPt, closestObject, faceIndex)) {
+				//B = brightness from light source; Kd = diffuse value from material
+				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+				RealVector Kd = closestObject.getFaceMaterial(faceIndex).getDiffuse();
+				
+				//I += Bd * Kd * (N dot L)
+				//System.out.println("FaceNormal: " + faceNormal);
+				double NdotL = faceNormal.dotProduct(L);
+				
+				if(NdotL < 0) {
+					NdotL = -1 * NdotL;
+				}
+				
+				//System.out.println("\tNdotLv: " + NdotLv);
+				Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
 			}
-			
-			//System.out.println("\tNdotLv: " + NdotLv);
-			Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
-			
 			
 		}
 		
@@ -645,45 +870,48 @@ public class Raytracer {
 		RealVector Is = new ArrayRealVector(3);
 		for(int m = 0; m < lights.size(); m++) {
 			
-			
-			//B = brightness from light source; Kd = diffuse value from material
-			RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-			RealVector Ks = closestObject.getFaceMaterial(faceIndex).getSpecular();
-			
 			//Create LightVector 
 			//Light location - surface point location
 			RealVector L = new ArrayRealVector(lights.get(m).getLocation());
 			L = L.subtract(intersectPt);
 			L.unitize();
 			
-			//Create Reflection Vector
-			double NdotL = faceNormal.dotProduct(L);
-			if(NdotL < 0) {
-				faceNormal.mapMultiplyToSelf(-1);
-				NdotL = faceNormal.dotProduct(L);
-				//NdotL = -1 * NdotL;
+			if(pathToLightTest(L, intersectPt, closestObject, faceIndex)) {
+				//B = brightness from light source; Kd = diffuse value from material
+				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+				RealVector Ks = closestObject.getFaceMaterial(faceIndex).getSpecular();
+				
+				//Create Reflection Vector
+				double NdotL = faceNormal.dotProduct(L);
+				if(NdotL < 0) {
+					faceNormal.mapMultiplyToSelf(-1);
+					NdotL = faceNormal.dotProduct(L);
+					//NdotL = -1 * NdotL;
+				}
+				
+				RealVector R = faceNormal.mapMultiply(2 * NdotL).subtract(L);
+				
+				
+				//Create View Vector
+				RealVector V = cam.getEye().subtract(intersectPt);
+				V.unitize();
+				double VdotR = V.dotProduct(R);
+				
+				//System.out.println("\tNdotL: " + NdotL);
+				if(VdotR < 0) {
+					VdotR = 0;
+				}
+				Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, closestObject.getFaceMaterial(faceIndex).getNs())));
 			}
 			
-			RealVector R = faceNormal.mapMultiply(2 * NdotL).subtract(L);
-			
-			
-			//Create View Vector
-			RealVector V = cam.getEye().subtract(intersectPt);
-			V.unitize();
-			double VdotR = V.dotProduct(R);
-			
-			//System.out.println("\tNdotL: " + NdotL);
-			if(VdotR < 0) {
-				VdotR = 0;
-			}
-			Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, closestObject.getFaceMaterial(faceIndex).getNs())));	
+				
 		}
 		return Ia.add(Id.add(Is));
 		
 	}
 	
 	//Calculates Illumination value for spheres
-	public RealVector sphereIllumination(ModelSphere closestSphere, RealVector sphereNormal, RealVector intersectPt) {
+	public RealVector sphereIllumination(ModelSphere closestSphere, int sphereIndex, RealVector sphereNormal, RealVector intersectPt) {
 		//Ambient
 		//Ba = ambient light from scene; Ka = ambient light from material
 		RealVector Ba = ambientLight;
@@ -694,11 +922,6 @@ public class Raytracer {
 		//Diffuse
 		RealVector Id = new ArrayRealVector(3);
 		for(int m = 0; m < lights.size(); m++) {
-			//B = brightness from light source; Kd = diffuse value from material
-			RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-			//System.out.println("B: " + B);
-			RealVector Kd = new ArrayRealVector(closestSphere.getDiffuse());
-			//System.out.println("Kd: " + Kd);
 			
 			//Create LightVector 
 			//Light location - surface point location
@@ -706,26 +929,32 @@ public class Raytracer {
 			L = L.subtract(intersectPt);
 			L.unitize();
 			
-			//I += Bd * Kd * (N dot L)
-			//System.out.println("\tSN: " + sphereNormal);
-			//System.out.println("\tL: " + L);
-			double NdotL = sphereNormal.dotProduct(L);
-			
-			if(NdotL < 0) {
-				NdotL = 0;
+			if(pathToLightTest(L, intersectPt, closestSphere)) {
+				//B = brightness from light source; Kd = diffuse value from material
+				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+				//System.out.println("B: " + B);
+				RealVector Kd = new ArrayRealVector(closestSphere.getDiffuse());
+				//System.out.println("Kd: " + Kd);
+				
+				//I += Bd * Kd * (N dot L)
+				//System.out.println("\tSN: " + sphereNormal);
+				//System.out.println("\tL: " + L);
+				double NdotL = sphereNormal.dotProduct(L);
+				
+				if(NdotL < 0) {
+					NdotL = 0;
+				}
+				
+				//System.out.println("\tNdotL: " + NdotL);
+				Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
 			}
 			
-			//System.out.println("\tNdotL: " + NdotL);
-			Id = Id.add(B.ebeMultiply(Kd).mapMultiply(NdotL));
 		}
 		
 		
 		//Specular
 		RealVector Is = new ArrayRealVector(3);
 		for(int m = 0; m < lights.size(); m++) {
-			//B = brightness from light source; Kd = diffuse value from material
-			RealVector B = new ArrayRealVector(lights.get(m).getEmission());
-			RealVector Ks = new ArrayRealVector(closestSphere.getSpecular());
 			
 			//Create LightVector 
 			//Light location - surface point location
@@ -733,27 +962,34 @@ public class Raytracer {
 			L = L.subtract(intersectPt);
 			L.unitize();
 			
-			//I += Bd * Kd * (N dot L)
-			//System.out.println("\tSN: " + sphereNormal);
-			//System.out.println("\tL: " + L);
-			
-			//Create Reflection Vector
-			double NdotL = sphereNormal.dotProduct(L);
-			if(NdotL < 0) {
-				NdotL = 0;
+			if(pathToLightTest(L, intersectPt, closestSphere)) {
+				//B = brightness from light source; Kd = diffuse value from material
+				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
+				RealVector Ks = new ArrayRealVector(closestSphere.getSpecular());
+				
+				//I += Bd * Kd * (N dot L)
+				//System.out.println("\tSN: " + sphereNormal);
+				//System.out.println("\tL: " + L);
+				
+				//Create Reflection Vector
+				double NdotL = sphereNormal.dotProduct(L);
+				if(NdotL < 0) {
+					NdotL = 0;
+				}
+				RealVector R = sphereNormal.mapMultiply(2 * NdotL).subtract(L);
+				
+				//Create View Vector
+				RealVector V = cam.getEye().subtract(intersectPt);
+				V.unitize();
+				double VdotR = V.dotProduct(R);
+				
+				//System.out.println("\tNdotL: " + NdotL);
+				if(VdotR < 0) {
+					VdotR = 0;
+				}
+				Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
 			}
-			RealVector R = sphereNormal.mapMultiply(2 * NdotL).subtract(L);
 			
-			//Create View Vector
-			RealVector V = cam.getEye().subtract(intersectPt);
-			V.unitize();
-			double VdotR = V.dotProduct(R);
-			
-			//System.out.println("\tNdotL: " + NdotL);
-			if(VdotR < 0) {
-				VdotR = 0;
-			}
-			Is = Is.add(B.ebeMultiply(Ks).mapMultiply(Math.pow(VdotR, phongConstant)));
 		}
 		return Ia.add(Id.add(Is));
 	}
@@ -837,6 +1073,7 @@ public class Raytracer {
 		//a.readDriver("driver00.txt");
 		//a.readDriver("driver01.txt");
 		//a.readDriver("driver02.txt");
+		
 		//a.readDriver("driver03.txt");
 		a.readDriver("simface.txt");
 		

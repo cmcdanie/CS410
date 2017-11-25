@@ -22,6 +22,7 @@ public class ModelObject {
 	public String materialFile;					//File name of material file
 	public Map<String, MaterialObject> materials;			//List of materials found in object file
 	private Map<Integer, MaterialObject> faceMaterial;		//Map of face index to material name
+	public MaterialObject defaultMaterial;
 	
 	
 	public ModelObject(String n) throws FileNotFoundException{
@@ -62,6 +63,9 @@ public class ModelObject {
 					
 				}
 				faces.add(token);
+				if(currentMtl.equals("")) {
+					currentMtl = defaultMaterial.getName();
+				}
 				faceMaterial.put(faces.size() - 1, materials.get(currentMtl));
 			}
 			else if(words[0].equals("mtllib")) {
@@ -99,6 +103,7 @@ public class ModelObject {
 				currentMtl = words[1];
 				MaterialObject mtl = new MaterialObject(currentMtl);
 				materials.put(currentMtl, mtl);
+				
 			}
 			
 			else if(words[0].equals("Ns")) {
@@ -134,6 +139,8 @@ public class ModelObject {
 				materials.get(currentMtl).setSpecular(Ks);
 			}
 		}
+		
+		defaultMaterial = materials.get(currentMtl);
 		
 		scan.close();
 	}
