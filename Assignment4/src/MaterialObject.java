@@ -7,12 +7,14 @@ public class MaterialObject {
 	public RealVector ambient;
 	public RealVector diffuse;
 	public RealVector specular;
+	public RealVector reflection;
 	public double Ns;
 	
 	MaterialObject(String n){
 		ambient = new ArrayRealVector(3);
 		diffuse = new ArrayRealVector(3);
 		specular = new ArrayRealVector(3);
+		reflection = new ArrayRealVector(new double[]{1, 1, 1,}) ;
 		materialName = n;
 		Ns = 0;
 	}
@@ -29,6 +31,10 @@ public class MaterialObject {
 		specular = Ks;
 	}
 	
+	public void setReflect(RealVector Kr) {
+		reflection = Kr;
+	}
+	
 	public void setNs(double ns) {
 		Ns = ns;
 	}
@@ -43,6 +49,10 @@ public class MaterialObject {
 	
 	public RealVector getSpecular() {
 		return specular;
+	}
+	
+	public RealVector getReflect() {
+		return reflection;
 	}
 	
 	public double getNs() {

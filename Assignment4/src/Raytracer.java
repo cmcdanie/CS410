@@ -42,8 +42,9 @@ public class Raytracer {
 	public RealVector ambientLight;
 	public LinkedList<Light> lights;
 	public RealVector[][] iValues;
-	public double phongConstant = 16;
+	public double phongConstant = 19;
 	public double[] background;
+	public int level;
 	
 	public Raytracer(){
 		modelObjects = new LinkedList<ModelObject>();
@@ -97,18 +98,17 @@ public class Raytracer {
 						translateObj(tx, ty, tz, obj);
 						
 						modelObjects.add(obj);
-						exportObj(obj, model, filename);
 						break;
 					
 					
 					case "sphere":
 						ModelSphere sphere = new ModelSphere();
-						sphere.setCenter(Double.parseDouble(words[1]), Double.parseDouble(words[2]), Double.parseDouble(words[3]));
+						sphere.setCenter(new ArrayRealVector(new double[] {Double.parseDouble(words[1]), Double.parseDouble(words[2]), Double.parseDouble(words[3])}));
 						sphere.setRadius(Double.parseDouble(words[4]));
-						sphere.setAmbient(Double.parseDouble(words[5]), Double.parseDouble(words[6]), Double.parseDouble(words[7]));
-						sphere.setDiffuse(Double.parseDouble(words[8]), Double.parseDouble(words[9]), Double.parseDouble(words[10]));
-						sphere.setSpecular(Double.parseDouble(words[11]), Double.parseDouble(words[12]), Double.parseDouble(words[13]));
-						sphere.setAttenuation(Double.parseDouble(words[14]), Double.parseDouble(words[15]), Double.parseDouble(words[16]));
+						sphere.setAmbient(new ArrayRealVector(new double[] {Double.parseDouble(words[5]), Double.parseDouble(words[6]), Double.parseDouble(words[7])}));
+						sphere.setDiffuse(new ArrayRealVector(new double[] {Double.parseDouble(words[8]), Double.parseDouble(words[9]), Double.parseDouble(words[10])}));
+						sphere.setSpecular(new ArrayRealVector(new double[] {Double.parseDouble(words[11]), Double.parseDouble(words[12]), Double.parseDouble(words[13])}));
+						sphere.setAttenuation(new ArrayRealVector(new double[] {Double.parseDouble(words[14]), Double.parseDouble(words[15]), Double.parseDouble(words[16])}));
 						modelSpheres.add(sphere);
 						break;
 					
@@ -145,7 +145,9 @@ public class Raytracer {
 						lights.add(light);
 						break;
 						
-						
+					case "recursionLevel":
+						level = Integer.parseInt(words[1]);
+					
 					//Comments
 					case "#":
 						break;
@@ -465,24 +467,25 @@ public class Raytracer {
 				//Illumination Array
 				RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
 				RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
-				int level = 0;
-				iValues[i][j] = rayTrace(ray, pixelPt, Illum, reffatt, level);
+				if(i == 278 & j == 233) {
+					System.out.println("\tHere!");
+				}
+				iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);
 				
 			}
 		}
 	}
 
 	//
-	public RealVector rayTrace(RealVector ray, RealVector originPt, RealVector accum, RealVector reffatt, int level) {
+	public RealVector rayTrace(int i, int j, RealVector ray, RealVector originPt, RealVector accum, RealVector reffatt, int level) {
 		double t = Double.POSITIVE_INFINITY;
 		
 		String closestType = "";
 		ModelObject closestObject = null;
-		RealVector faceNormal = null;
+		RealVector normalVect = null;
 		int faceIndex = -1;
 		RealVector intersectPt = null;
 		ModelSphere closestSphere = null;
-		RealVector sphereNormal = null;
 		int sphereIndex = -1;
 		
 		//Iterate through all objects
@@ -522,19 +525,20 @@ public class Raytracer {
 				double gamma = solution.getEntry(1);
 				double t1 = solution.getEntry(2);
 				
-				if((beta < 0) && (beta > -0.00000000001)){
+				if((beta < 0) && (beta > -0.00001)){
 					beta = 0;
 				}
-				if((gamma < 0) && (gamma > -0.00000000001)){
+				if((gamma < 0) && (gamma > -0.00001)){
 					gamma = 0;
 				}
 				
 				
 				
 				//Test if intersection is on face
+				
 				if((beta >= 0) && (gamma >= 0)){
 					if((beta + gamma) <= 1){
-						if((t1 > 0) & (t1 <= t)){
+						if((t1 > 0.00001) & (t1 <= t)){
 							betaT = beta;
 							gammaT = gamma;
 							t = t1;
@@ -549,8 +553,8 @@ public class Raytracer {
 							double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
 							RealVector AC = new ArrayRealVector(ac);
 							
-							faceNormal = cross3(AB, AC);
-							faceNormal.unitize();
+							normalVect = cross3(AB, AC);
+							normalVect.unitize();
 							
 							//Calculate IntersectionPt
 							RealVector ptAv = new ArrayRealVector(ptA);
@@ -566,9 +570,8 @@ public class Raytracer {
 		
 		//Iterate through spheres
 		for(int k = 0; k < modelSpheres.size(); k++){
-			double[] cntr = modelSpheres.get(k).getCenter();
 			double radius = modelSpheres.get(k).getRadius();
-			RealVector center = new ArrayRealVector(cntr);
+			RealVector center = modelSpheres.get(k).getCenter();
 			RealVector C = center.subtract(originPt);
 			
 			double V = C.dotProduct(ray);
@@ -579,7 +582,7 @@ public class Raytracer {
 				RealVector Q = ray.mapMultiply(V - d);
 				Q = Q.add(originPt);
 				double t1 = V - d;
-				if(t1 < t){
+				if((t1 < t) & (t1 > 0.00001)){
 					t = t1;
 					closestType = "sphere";
 					closestSphere = modelSpheres.get(k);
@@ -587,34 +590,71 @@ public class Raytracer {
 					sphereIndex = k;
 					
 					//Calculate sphereNormal
-					sphereNormal = Q.subtract(center);
-					sphereNormal.unitize();
+					normalVect = Q.subtract(center);
+					normalVect.unitize();
 					
 				}
 			}
 		}
-		
+		if(i == 278 & j == 233) {
+			System.out.println("current level: " + level);
+			System.out.println("t: " + t);
+			System.out.println("intersectPt: " + intersectPt);
+		}
 		
 		//Calculate Illumination
-		RealVector illumination= new ArrayRealVector(3);
+		RealVector illumination = new ArrayRealVector(3);
+		RealVector materialKr = new ArrayRealVector(3);
 		
 		//If no objects intersected, set illumination to background value
 		if(t == Double.POSITIVE_INFINITY){
 			illumination = new ArrayRealVector(background);
-			accum = illumination;
+			accum = accum.add(illumination);
 			//System.out.println("\tival: " + illumination);
 		}
 		else {
 			//Lighting for Objects
 			if(closestType.equals("object")) {
-				accum = objectIllumination(closestObject, faceIndex, faceNormal, intersectPt);
+				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt);
+				materialKr = closestObject.getFaceMaterial(faceIndex).getReflect();
 			}
 			
 			//Lighting for Spheres
 			else if(closestType.equals("sphere")) {
-				accum = sphereIllumination(closestSphere, sphereIndex, sphereNormal, intersectPt);
+				illumination = sphereIllumination(closestSphere, sphereIndex, normalVect, originPt, intersectPt);
+				materialKr = closestSphere.getAttenuation();
 			}
+			
+			accum = accum.add(illumination);
+			
+			//Check recursion level
+			if(level > 0) {
+				//Calculate reflection ray from incoming ray
+				RealVector rayInv = ray.mapMultiply(-1);
+				double rayInvDotN = rayInv.dotProduct(normalVect);
+				rayInvDotN = rayInvDotN * 2;
+				RealVector Rv = normalVect.mapMultiply(rayInvDotN);
+				Rv = Rv.subtract(rayInv);
+				Rv.unitize();
+				
+				//Recursive call
+				if(i == 278 & j == 233) {
+					System.out.println("Rv: " + Rv);
+					System.out.println("originPt: " + originPt);
+					System.out.println("illumination: " + illumination);
+				}
+				//System.out.println("\t\taccum at level: " + level + ": " + accum);
+				
+				accum = rayTrace(i, j, Rv, intersectPt, accum, materialKr.ebeMultiply(reffatt), level - 1);
+				
+				if(i == 278 & j == 233) {
+					System.out.println("accum: " + accum);
+				}
+			}
+			
 		}
+		
+		
 		return accum;
 	}
 	
@@ -670,10 +710,10 @@ public class Raytracer {
 				
 				
 				//Test if intersection is on different face
-				if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
+				//if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
 					if((beta >= 0) && (gamma >= 0)){
 						if((beta + gamma) <= 1){
-							if((t1 > 0) & (t1 <= t)){
+							if((t1 > 0.00001) & (t1 <= t)){
 								betaT = beta;
 								gammaT = gamma;
 								t = t1;
@@ -681,7 +721,7 @@ public class Raytracer {
 							}
 						}
 					}
-				}
+				//}
 				
 				
 				if(t < Double.POSITIVE_INFINITY) {
@@ -695,9 +735,8 @@ public class Raytracer {
 		
 		//Iterate through spheres
 		for(int k = 0; k < modelSpheres.size(); k++){
-			double[] cntr = modelSpheres.get(k).getCenter();
 			double radius = modelSpheres.get(k).getRadius();
-			RealVector center = new ArrayRealVector(cntr);
+			RealVector center = modelSpheres.get(k).getCenter();
 			RealVector C = center.subtract(originPt);
 			
 			double V = C.dotProduct(ray);
@@ -708,7 +747,7 @@ public class Raytracer {
 				RealVector Q = ray.mapMultiply(V - d);
 				Q = Q.add(originPt);
 				double t1 = V - d;
-				if((t1 < t) & (t1 > 0)){
+				if((t1 < t) & (t1 > 0.00001)){
 					t = t1;
 					
 					
@@ -765,10 +804,10 @@ public class Raytracer {
 				double gamma = solution.getEntry(1);
 				double t1 = solution.getEntry(2);
 				
-				if((beta < 0) && (beta > -0.00000000001)){
+				if((beta < 0) && (beta > -0.00001)){
 					beta = 0;
 				}
-				if((gamma < 0) && (gamma > -0.00000000001)){
+				if((gamma < 0) && (gamma > -0.00001)){
 					gamma = 0;
 				}
 				
@@ -777,7 +816,7 @@ public class Raytracer {
 				//Test if intersection is on face
 				if((beta >= 0) && (gamma >= 0)){
 					if((beta + gamma) <= 1){
-						if((t1 > 0) & (t1 <= t)){
+						if((t1 > 0.00001) & (t1 <= t)){
 							betaT = beta;
 							gammaT = gamma;
 							t = t1;
@@ -799,9 +838,8 @@ public class Raytracer {
 		//Iterate through spheres
 		for(int k = 0; k < modelSpheres.size(); k++){
 			if(modelSpheres.get(k) != currSphere) {
-				double[] cntr = modelSpheres.get(k).getCenter();
 				double radius = modelSpheres.get(k).getRadius();
-				RealVector center = new ArrayRealVector(cntr);
+				RealVector center = modelSpheres.get(k).getCenter();
 				RealVector C = center.subtract(originPt);
 				
 				double V = C.dotProduct(ray);
@@ -812,7 +850,7 @@ public class Raytracer {
 					RealVector Q = ray.mapMultiply(V - d);
 					Q = Q.add(originPt);
 					double t1 = V - d;
-					if((t1 < t) & (t1 > 0)){
+					if((t1 < t) & (t1 > 0.00001)){
 						t = t1;
 						
 						
@@ -830,7 +868,7 @@ public class Raytracer {
 	}
 	
 	//Calculates Illumination value for an object
-	public RealVector objectIllumination(ModelObject closestObject, int faceIndex, RealVector faceNormal, RealVector intersectPt) {
+	public RealVector objectIllumination(ModelObject closestObject, int faceIndex, RealVector faceNormal, RealVector originPt, RealVector intersectPt) {
 		//Ambient
 		//Ba = ambient light from scene; Ka = ambient light from material
 		RealVector Ba = ambientLight;
@@ -893,7 +931,7 @@ public class Raytracer {
 				
 				
 				//Create View Vector
-				RealVector V = cam.getEye().subtract(intersectPt);
+				RealVector V = originPt.subtract(intersectPt);
 				V.unitize();
 				double VdotR = V.dotProduct(R);
 				
@@ -911,7 +949,7 @@ public class Raytracer {
 	}
 	
 	//Calculates Illumination value for spheres
-	public RealVector sphereIllumination(ModelSphere closestSphere, int sphereIndex, RealVector sphereNormal, RealVector intersectPt) {
+	public RealVector sphereIllumination(ModelSphere closestSphere, int sphereIndex, RealVector sphereNormal, RealVector originPt, RealVector intersectPt) {
 		//Ambient
 		//Ba = ambient light from scene; Ka = ambient light from material
 		RealVector Ba = ambientLight;
@@ -979,7 +1017,7 @@ public class Raytracer {
 				RealVector R = sphereNormal.mapMultiply(2 * NdotL).subtract(L);
 				
 				//Create View Vector
-				RealVector V = cam.getEye().subtract(intersectPt);
+				RealVector V = originPt.subtract(intersectPt);
 				V.unitize();
 				double VdotR = V.dotProduct(R);
 				
@@ -1074,7 +1112,7 @@ public class Raytracer {
 		//a.readDriver("driver01.txt");
 		//a.readDriver("driver02.txt");
 		
-		//a.readDriver("driver03.txt");
+		//a.readDriver("drivers_models\driver_models\driver00.txt");
 		a.readDriver("simface.txt");
 		
 		System.out.println("Completed Reading Driver file");

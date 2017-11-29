@@ -102,8 +102,7 @@ public class ModelObject {
 			if(words[0].equals("newmtl")) {
 				currentMtl = words[1];
 				MaterialObject mtl = new MaterialObject(currentMtl);
-				materials.put(currentMtl, mtl);
-				
+				materials.put(currentMtl, mtl);	
 			}
 			
 			else if(words[0].equals("Ns")) {
@@ -137,6 +136,15 @@ public class ModelObject {
 				}
 				RealVector Ks = new ArrayRealVector(token);
 				materials.get(currentMtl).setSpecular(Ks);
+			}
+			
+			else if(words[0].equals("Kr")) {
+				double[] token = new double[words.length - 1];
+				for(int i = 0; i < words.length - 1; i++){
+					token[i] = Double.parseDouble(words[i + 1]);
+				}
+				RealVector Kr = new ArrayRealVector(token);
+				materials.get(currentMtl).setReflect(Kr);
 			}
 		}
 		
