@@ -16,6 +16,7 @@ import java.util.Scanner;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.SingularMatrixException;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.DecompositionSolver;
@@ -466,9 +467,6 @@ public class Raytracer {
 				//Illumination Array
 				RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
 				RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
-				if(i == 50 & j == 63) {
-					System.out.println("\tHere!");
-				}
 				iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);
 				
 			}
@@ -519,48 +517,53 @@ public class Raytracer {
 								 ptA[2] - originPt.getEntry(2)};
 				
 				RealVector constants = new ArrayRealVector(Y, false);
-				RealVector solution = solver.solve(constants);
-				double beta = solution.getEntry(0);
-				double gamma = solution.getEntry(1);
-				double t1 = solution.getEntry(2);
 				
-				if((beta < 0) && (beta > -0.00001)){
-					beta = 0;
-				}
-				if((gamma < 0) && (gamma > -0.00001)){
-					gamma = 0;
-				}
-				
-				
-				
-				//Test if intersection is on face
-				
-				if((beta >= 0) && (gamma >= 0)){
-					if((beta + gamma) <= 1){
-						if((t1 > 0.00001) & (t1 <= t)){
-							betaT = beta;
-							gammaT = gamma;
-							t = t1;
-							closestType = "object";
-							closestObject = modelObjects.get(k);
-							
-							//Calculate faceNormal
-							//A - B
-							double[] ab = {ptB[0] - ptA[0], ptB[1] - ptA[1], ptB[2] - ptA[2]};
-							RealVector AB = new ArrayRealVector(ab);
-							//A - C
-							double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
-							RealVector AC = new ArrayRealVector(ac);
-							
-							normalVect = cross3(AB, AC);
-							normalVect.unitize();
-							
-							//Calculate IntersectionPt
-							RealVector ptAv = new ArrayRealVector(ptA);
-							intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
-							faceIndex = l;
+				try{
+					RealVector solution = solver.solve(constants);
+					double beta = solution.getEntry(0);
+					double gamma = solution.getEntry(1);
+					double t1 = solution.getEntry(2);
+					
+					if((beta < 0) && (beta > -0.00001)){
+						beta = 0;
+					}
+					if((gamma < 0) && (gamma > -0.00001)){
+						gamma = 0;
+					}
+					
+					
+					
+					//Test if intersection is on face
+					
+					if((beta >= 0) && (gamma >= 0)){
+						if((beta + gamma) <= 1){
+							if((t1 > 0.00001) & (t1 <= t)){
+								betaT = beta;
+								gammaT = gamma;
+								t = t1;
+								closestType = "object";
+								closestObject = modelObjects.get(k);
+								
+								//Calculate faceNormal
+								//A - B
+								double[] ab = {ptB[0] - ptA[0], ptB[1] - ptA[1], ptB[2] - ptA[2]};
+								RealVector AB = new ArrayRealVector(ab);
+								//A - C
+								double[] ac = {ptC[0] - ptA[0], ptC[1] - ptA[1], ptC[2] - ptA[2]};
+								RealVector AC = new ArrayRealVector(ac);
+								
+								normalVect = cross3(AB, AC);
+								normalVect.unitize();
+								
+								//Calculate IntersectionPt
+								RealVector ptAv = new ArrayRealVector(ptA);
+								intersectPt = ptAv.add(AB.mapMultiply(beta).add(AC.mapMultiply(gamma)));
+								faceIndex = l;
+							}
 						}
 					}
+				} catch (SingularMatrixException e){
+					System.err.println("SingularMatrixException: " + e.getMessage());
 				}
 			}
 		}
@@ -595,11 +598,7 @@ public class Raytracer {
 				}
 			}
 		}
-		if(i == 50 & j == 63) {
-			System.out.println("current level: " + level);
-			System.out.println("t: " + t);
-			System.out.println("intersectPt: " + intersectPt);
-		}
+		
 		
 		//Calculate Illumination
 		RealVector illumination = new ArrayRealVector(3);
@@ -637,18 +636,8 @@ public class Raytracer {
 				Rv.unitize();
 				
 				//Recursive call
-				if(i == 50 & j == 63) {
-					System.out.println("Rv: " + Rv);
-					System.out.println("originPt: " + originPt);
-					System.out.println("illumination: " + illumination);
-				}
-				//System.out.println("\t\taccum at level: " + level + ": " + accum);
-				
 				accum = rayTrace(i, j, Rv, intersectPt, accum, materialKr.ebeMultiply(reffatt), level - 1);
 				
-				if(i == 50 & j == 63) {
-					System.out.println("accum: " + accum);
-				}
 			}
 			
 		}
@@ -694,33 +683,41 @@ public class Raytracer {
 								 ptA[2] - originPt.getEntry(2)};
 				
 				RealVector constants = new ArrayRealVector(Y, false);
-				RealVector solution = solver.solve(constants);
-				double beta = solution.getEntry(0);
-				double gamma = solution.getEntry(1);
-				double t1 = solution.getEntry(2);
 				
-				if((beta < 0) && (beta > -0.00000000001)){
-					beta = 0;
-				}
-				if((gamma < 0) && (gamma > -0.00000000001)){
-					gamma = 0;
-				}
-				
-				
-				
-				//Test if intersection is on different face
-				//if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
-					if((beta >= 0) && (gamma >= 0)){
-						if((beta + gamma) <= 1){
-							if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
-								betaT = beta;
-								gammaT = gamma;
-								t = t1;
-								
+				try{
+					RealVector solution = solver.solve(constants);
+					
+					
+					double beta = solution.getEntry(0);
+					double gamma = solution.getEntry(1);
+					double t1 = solution.getEntry(2);
+					
+					if((beta < 0) && (beta > -0.00000000001)){
+						beta = 0;
+					}
+					if((gamma < 0) && (gamma > -0.00000000001)){
+						gamma = 0;
+					}
+					
+					
+					
+					//Test if intersection is on different face
+					//if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
+						if((beta >= 0) && (gamma >= 0)){
+							if((beta + gamma) <= 1){
+								if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
+									betaT = beta;
+									gammaT = gamma;
+									t = t1;
+									
+								}
 							}
 						}
-					}
-				//}
+					//}
+				} catch (SingularMatrixException e){
+					System.err.println("SingularMatrixException: " + e.getMessage());
+				}
+				
 				
 				
 				if(t < Double.POSITIVE_INFINITY) {
@@ -798,31 +795,37 @@ public class Raytracer {
 								 ptA[2] - originPt.getEntry(2)};
 				
 				RealVector constants = new ArrayRealVector(Y, false);
-				RealVector solution = solver.solve(constants);
-				double beta = solution.getEntry(0);
-				double gamma = solution.getEntry(1);
-				double t1 = solution.getEntry(2);
 				
-				if((beta < 0) && (beta > -0.00001)){
-					beta = 0;
-				}
-				if((gamma < 0) && (gamma > -0.00001)){
-					gamma = 0;
-				}
-				
-				
-				
-				//Test if intersection is on face
-				if((beta >= 0) && (gamma >= 0)){
-					if((beta + gamma) <= 1){
-						if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
-							betaT = beta;
-							gammaT = gamma;
-							t = t1;
-							
+				try{
+					RealVector solution = solver.solve(constants);
+					double beta = solution.getEntry(0);
+					double gamma = solution.getEntry(1);
+					double t1 = solution.getEntry(2);
+					
+					if((beta < 0) && (beta > -0.00001)){
+						beta = 0;
+					}
+					if((gamma < 0) && (gamma > -0.00001)){
+						gamma = 0;
+					}
+					
+					
+					
+					//Test if intersection is on face
+					if((beta >= 0) && (gamma >= 0)){
+						if((beta + gamma) <= 1){
+							if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
+								betaT = beta;
+								gammaT = gamma;
+								t = t1;
+								
+							}
 						}
 					}
+				} catch (SingularMatrixException e){
+					System.err.println("SingularMatrixException: " + e.getMessage());
 				}
+				
 				
 				
 				if(t < Double.POSITIVE_INFINITY) {
@@ -900,10 +903,6 @@ public class Raytracer {
 			
 			if(lightT < 0){
 				lightT = -1 * lightT;
-			}
-			
-			if(i == 50 & j == 63){
-				System.out.println("lightT: " + lightT);
 			}
 			
 			if(pathToLightTest(L, intersectPt, lightT, closestObject, faceIndex)) {
