@@ -466,7 +466,7 @@ public class Raytracer {
 				//Illumination Array
 				RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
 				RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
-				if(i == 278 & j == 233) {
+				if(i == 50 & j == 63) {
 					System.out.println("\tHere!");
 				}
 				iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);
@@ -595,7 +595,7 @@ public class Raytracer {
 				}
 			}
 		}
-		if(i == 278 & j == 233) {
+		if(i == 50 & j == 63) {
 			System.out.println("current level: " + level);
 			System.out.println("t: " + t);
 			System.out.println("intersectPt: " + intersectPt);
@@ -614,7 +614,7 @@ public class Raytracer {
 		else {
 			//Lighting for Objects
 			if(closestType.equals("object")) {
-				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt);
+				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt, i, j);
 				materialKr = closestObject.getFaceMaterial(faceIndex).getReflect();
 			}
 			
@@ -637,7 +637,7 @@ public class Raytracer {
 				Rv.unitize();
 				
 				//Recursive call
-				if(i == 278 & j == 233) {
+				if(i == 50 & j == 63) {
 					System.out.println("Rv: " + Rv);
 					System.out.println("originPt: " + originPt);
 					System.out.println("illumination: " + illumination);
@@ -646,7 +646,7 @@ public class Raytracer {
 				
 				accum = rayTrace(i, j, Rv, intersectPt, accum, materialKr.ebeMultiply(reffatt), level - 1);
 				
-				if(i == 278 & j == 233) {
+				if(i == 50 & j == 63) {
 					System.out.println("accum: " + accum);
 				}
 			}
@@ -867,7 +867,7 @@ public class Raytracer {
 	}
 	
 	//Calculates Illumination value for an object
-	public RealVector objectIllumination(ModelObject closestObject, int faceIndex, RealVector faceNormal, RealVector originPt, RealVector intersectPt) {
+	public RealVector objectIllumination(ModelObject closestObject, int faceIndex, RealVector faceNormal, RealVector originPt, RealVector intersectPt, int i, int j) {
 		//Ambient
 		//Ba = ambient light from scene; Ka = ambient light from material
 		RealVector Ba = ambientLight;
@@ -889,13 +889,21 @@ public class Raytracer {
 			double lightT = -1;
 			
 			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
-				lightT = Lfull.getEntry(0) - L.getEntry(0);
+				lightT = Lfull.getEntry(0) / L.getEntry(0);
 			}
 			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
-				lightT = Lfull.getEntry(1) - L.getEntry(1);
+				lightT = Lfull.getEntry(1) / L.getEntry(1);
 			}
 			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
-				lightT = Lfull.getEntry(2) - L.getEntry(2);
+				lightT = Lfull.getEntry(2) / L.getEntry(2);
+			}
+			
+			if(lightT < 0){
+				lightT = -1 * lightT;
+			}
+			
+			if(i == 50 & j == 63){
+				System.out.println("lightT: " + lightT);
 			}
 			
 			if(pathToLightTest(L, intersectPt, lightT, closestObject, faceIndex)) {
@@ -932,13 +940,17 @@ public class Raytracer {
 			double lightT = -1;
 			
 			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
-				lightT = Lfull.getEntry(0) - L.getEntry(0);
+				lightT = Lfull.getEntry(0) / L.getEntry(0);
 			}
 			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
-				lightT = Lfull.getEntry(1) - L.getEntry(1);
+				lightT = Lfull.getEntry(1) / L.getEntry(1);
 			}
 			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
-				lightT = Lfull.getEntry(2) - L.getEntry(2);
+				lightT = Lfull.getEntry(2) / L.getEntry(2);
+			}
+			
+			if(lightT < 0){
+				lightT = -1 * lightT;
 			}
 			
 			if(pathToLightTest(L, intersectPt, lightT, closestObject, faceIndex)) {
@@ -999,13 +1011,17 @@ public class Raytracer {
 			double lightT = -1;
 			
 			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
-				lightT = Lfull.getEntry(0) - L.getEntry(0);
+				lightT = Lfull.getEntry(0) / L.getEntry(0);
 			}
 			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
-				lightT = Lfull.getEntry(1) - L.getEntry(1);
+				lightT = Lfull.getEntry(1) / L.getEntry(1);
 			}
 			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
-				lightT = Lfull.getEntry(2) - L.getEntry(2);
+				lightT = Lfull.getEntry(2) / L.getEntry(2);
+			}
+			
+			if(lightT < 0){
+				lightT = -1 * lightT;
 			}
 			
 			if(pathToLightTest(L, intersectPt, lightT, closestSphere)) {
@@ -1046,13 +1062,17 @@ public class Raytracer {
 			double lightT = -1;
 			
 			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
-				lightT = Lfull.getEntry(0) - L.getEntry(0);
+				lightT = Lfull.getEntry(0) / L.getEntry(0);
 			}
 			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
-				lightT = Lfull.getEntry(1) - L.getEntry(1);
+				lightT = Lfull.getEntry(1) / L.getEntry(1);
 			}
 			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
-				lightT = Lfull.getEntry(2) - L.getEntry(2);
+				lightT = Lfull.getEntry(2) / L.getEntry(2);
+			}
+			
+			if(lightT < 0){
+				lightT = -1 * lightT;
 			}
 			
 			if(pathToLightTest(L, intersectPt, lightT, closestSphere)) {
@@ -1156,7 +1176,7 @@ public class Raytracer {
 		
 		
 		
-		
+		//a.readDriver("driver00.txt");
 		a.readDriver("driver03.txt");
 		//a.readDriver("driver01.txt");
 		//a.readDriver("driver02.txt");
