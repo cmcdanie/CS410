@@ -9,7 +9,6 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -659,7 +658,7 @@ public class Raytracer {
 	}
 	
 	//Returns true if no object or sphere in path from intersectPt to light
-	public boolean pathToLightTest(RealVector ray, RealVector originPt, ModelObject currObj, int faceIndex) {
+	public boolean pathToLightTest(RealVector ray, RealVector originPt, double lightT, ModelObject currObj, int faceIndex) {
 		
 		double t = Double.POSITIVE_INFINITY;
 		
@@ -713,7 +712,7 @@ public class Raytracer {
 				//if(modelObjects.get(k).getFace(l) != currObj.getFace(faceIndex)) {
 					if((beta >= 0) && (gamma >= 0)){
 						if((beta + gamma) <= 1){
-							if((t1 > 0.00001) & (t1 <= t)){
+							if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
 								betaT = beta;
 								gammaT = gamma;
 								t = t1;
@@ -747,7 +746,7 @@ public class Raytracer {
 				RealVector Q = ray.mapMultiply(V - d);
 				Q = Q.add(originPt);
 				double t1 = V - d;
-				if((t1 < t) & (t1 > 0.00001)){
+				if((t1 < t) & (t1 > 0.00001) & (t1 < lightT)){
 					t = t1;
 					
 					
@@ -763,7 +762,7 @@ public class Raytracer {
 		return true;
 	}
 	
-	public boolean pathToLightTest(RealVector ray, RealVector originPt, ModelSphere currSphere) {
+	public boolean pathToLightTest(RealVector ray, RealVector originPt, double lightT, ModelSphere currSphere) {
 		
 		double t = Double.POSITIVE_INFINITY;
 		
@@ -816,7 +815,7 @@ public class Raytracer {
 				//Test if intersection is on face
 				if((beta >= 0) && (gamma >= 0)){
 					if((beta + gamma) <= 1){
-						if((t1 > 0.00001) & (t1 <= t)){
+						if((t1 > 0.00001) & (t1 <= t) & (t1 < lightT)){
 							betaT = beta;
 							gammaT = gamma;
 							t = t1;
@@ -850,7 +849,7 @@ public class Raytracer {
 					RealVector Q = ray.mapMultiply(V - d);
 					Q = Q.add(originPt);
 					double t1 = V - d;
-					if((t1 < t) & (t1 > 0.00001)){
+					if((t1 < t) & (t1 > 0.00001) & (t1 < lightT)){
 						t = t1;
 						
 						
@@ -883,9 +882,23 @@ public class Raytracer {
 			//Light location - surface point location
 			RealVector L = new ArrayRealVector(lights.get(m).getLocation());
 			L = L.subtract(intersectPt);
+			RealVector Lfull = L.copy();
 			L.unitize();
 			
-			if(pathToLightTest(L, intersectPt, closestObject, faceIndex)) {
+			//Calculate T value to light
+			double lightT = -1;
+			
+			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
+				lightT = Lfull.getEntry(0) - L.getEntry(0);
+			}
+			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
+				lightT = Lfull.getEntry(1) - L.getEntry(1);
+			}
+			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
+				lightT = Lfull.getEntry(2) - L.getEntry(2);
+			}
+			
+			if(pathToLightTest(L, intersectPt, lightT, closestObject, faceIndex)) {
 				//B = brightness from light source; Kd = diffuse value from material
 				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
 				RealVector Kd = closestObject.getFaceMaterial(faceIndex).getDiffuse();
@@ -912,9 +925,23 @@ public class Raytracer {
 			//Light location - surface point location
 			RealVector L = new ArrayRealVector(lights.get(m).getLocation());
 			L = L.subtract(intersectPt);
+			RealVector Lfull = L.copy();
 			L.unitize();
 			
-			if(pathToLightTest(L, intersectPt, closestObject, faceIndex)) {
+			//Calculate T value to light
+			double lightT = -1;
+			
+			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
+				lightT = Lfull.getEntry(0) - L.getEntry(0);
+			}
+			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
+				lightT = Lfull.getEntry(1) - L.getEntry(1);
+			}
+			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
+				lightT = Lfull.getEntry(2) - L.getEntry(2);
+			}
+			
+			if(pathToLightTest(L, intersectPt, lightT, closestObject, faceIndex)) {
 				//B = brightness from light source; Kd = diffuse value from material
 				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
 				RealVector Ks = closestObject.getFaceMaterial(faceIndex).getSpecular();
@@ -965,9 +992,23 @@ public class Raytracer {
 			//Light location - surface point location
 			RealVector L = new ArrayRealVector(lights.get(m).getLocation());
 			L = L.subtract(intersectPt);
+			RealVector Lfull = L.copy();
 			L.unitize();
 			
-			if(pathToLightTest(L, intersectPt, closestSphere)) {
+			//Calculate T value to light
+			double lightT = -1;
+			
+			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
+				lightT = Lfull.getEntry(0) - L.getEntry(0);
+			}
+			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
+				lightT = Lfull.getEntry(1) - L.getEntry(1);
+			}
+			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
+				lightT = Lfull.getEntry(2) - L.getEntry(2);
+			}
+			
+			if(pathToLightTest(L, intersectPt, lightT, closestSphere)) {
 				//B = brightness from light source; Kd = diffuse value from material
 				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
 				//System.out.println("B: " + B);
@@ -998,9 +1039,23 @@ public class Raytracer {
 			//Light location - surface point location
 			RealVector L = new ArrayRealVector(lights.get(m).getLocation());
 			L = L.subtract(intersectPt);
+			RealVector Lfull = L.copy();
 			L.unitize();
 			
-			if(pathToLightTest(L, intersectPt, closestSphere)) {
+			//Calculate T value to light
+			double lightT = -1;
+			
+			if((Lfull.getEntry(0) != 0) & (L.getEntry(0) != 0)){
+				lightT = Lfull.getEntry(0) - L.getEntry(0);
+			}
+			else if((Lfull.getEntry(1) != 0) & (L.getEntry(1) != 0)){
+				lightT = Lfull.getEntry(1) - L.getEntry(1);
+			}
+			else if((Lfull.getEntry(2) != 0) & (L.getEntry(2) != 0)){
+				lightT = Lfull.getEntry(2) - L.getEntry(2);
+			}
+			
+			if(pathToLightTest(L, intersectPt, lightT, closestSphere)) {
 				//B = brightness from light source; Kd = diffuse value from material
 				RealVector B = new ArrayRealVector(lights.get(m).getEmission());
 				RealVector Ks = new ArrayRealVector(closestSphere.getSpecular());
@@ -1097,23 +1152,16 @@ public class Raytracer {
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
 		
-		/*
-		double[] a1 = {0.1, 0.2, 0.3};
-		RealVector Ba = new ArrayRealVector(a1);
-		double[] a2 = {0.4, 0.5, 0.6};
-		RealVector Ka = new ArrayRealVector(a2);
-		RealVector ill = Ba.ebeMultiply(Ka);
-		System.out.println(ill);
-		*/
-		
 		//a.readDriver(args[0]);
 		
-		//a.readDriver("driver00.txt");
+		
+		
+		
+		a.readDriver("driver03.txt");
 		//a.readDriver("driver01.txt");
 		//a.readDriver("driver02.txt");
 		
-		//a.readDriver("drivers_models\driver_models\driver00.txt");
-		a.readDriver("simface.txt");
+		//a.readDriver("simface.txt");
 		
 		System.out.println("Completed Reading Driver file");
 		a.render();
