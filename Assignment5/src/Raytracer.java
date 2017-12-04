@@ -21,6 +21,84 @@ import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.LUDecomposition;
+
+class Test implements Runnable{
+
+	Thread t;
+	private String threadName;
+	private Raytracer rt;
+	  
+	Test( String name, Raytracer rayt) {
+	   threadName = name;
+	   rt = rayt;
+	   System.out.println("Creating " +  threadName );
+	}
+	   
+	public void run() {
+	   System.out.println("Running " +  threadName );
+	   
+	   if(threadName.equals("1")){
+		   double pastPercent = 0.0;
+			
+			//Iterate through each pixel
+			for(int i = 0; i < rt.cam.getHeight(); i++) {
+				for(int j = 0; j < rt.cam.getWidth(); j = j + 4) {
+					
+					//Display percentage of completed pixels
+					double percent = (double)i / (double)(rt.cam.getHeight() - 1);
+					percent = percent * 100;
+					DecimalFormat df = new DecimalFormat("#.##");
+					if(!df.format(percent).equals(df.format(pastPercent))){
+						if((percent - pastPercent) >= 1 | percent == 100) {
+							System.out.println("Ray Trace: " + df.format(percent) + "% Completed"); 
+							pastPercent = percent;
+						}
+					}
+					rt.render(i, j);
+				}
+			}
+	   }
+	   
+	   else if(threadName.equals("2")){
+		 //Iterate through each pixel
+			for(int i = 0; i < rt.cam.getHeight(); i++) {
+				for(int j = 1; j < rt.cam.getWidth(); j = j + 4) {
+					rt.render(i, j);
+				}
+			}
+	   }
+	   
+	   else if(threadName.equals("3")){
+			//Iterate through each pixel
+			for(int i = 0; i < rt.cam.getHeight(); i++) {
+				for(int j = 2; j < rt.cam.getWidth(); j = j + 4) {
+					rt.render(i, j);
+				}
+			}
+	   }
+	   
+	   else if(threadName.equals("4")){
+			//Iterate through each pixel
+			for(int i = 0; i < rt.cam.getHeight(); i++) {
+				for(int j = 3; j < rt.cam.getWidth(); j = j + 4) {
+					rt.render(i, j);
+				}
+			}
+	   } 
+	   	   
+	   System.out.println("Thread " +  threadName + " exiting.");
+	}
+	   
+	public void start () {
+	   System.out.println("Starting " +  threadName );
+	   if (t == null) {
+	      t = new Thread (this, threadName);
+	      t.start ();
+	   }
+	}
+	
+}
+
 public class Raytracer {
 	
 	//Scene objects
@@ -408,69 +486,41 @@ public class Raytracer {
 	}
 	
 	//
-	public void render() {
+	public void render(int i, int j) {
+		//System.out.println("Pixel(" + i + ", " + j + ")");
 		
-		pixelR = new int[cam.getHeight()][cam.getWidth()];
-		pixelG = new int[cam.getHeight()][cam.getWidth()];
-		pixelB = new int[cam.getHeight()][cam.getWidth()];
-		iValues = new RealVector[cam.getHeight()][cam.getWidth()];
-		tMin = Double.POSITIVE_INFINITY;
-		tMax = 0.0;
 		
-		double pastPercent = 0.0;
+		//System.out.println("Pixel(" + i + ", " + j + ")");
+		//System.out.println("Right: " + cam.getRight());
+		//System.out.println("Left: " + cam.getLeft());
 		
-		//Iterate through each pixel
-		for(int i = 0; i < cam.getHeight(); i++) {
-			for(int j = 0; j < cam.getWidth(); j++) {
-				
-				//System.out.println("Pixel(" + i + ", " + j + ")");
-				
-				//Display percentage of completed pixels
-				double percent = (double)i / (double)(cam.getHeight() - 1);
-				percent = percent * 100;
-				DecimalFormat df = new DecimalFormat("#.##");
-				if(!df.format(percent).equals(df.format(pastPercent))){
-					if((percent - pastPercent) >= 1 | percent == 100) {
-						System.out.println("Ray Trace: " + df.format(percent) + "% Completed"); 
-						pastPercent = percent;
-					}
-				}
-				
-				
-				//System.out.println("Pixel(" + i + ", " + j + ")");
-				//System.out.println("Right: " + cam.getRight());
-				//System.out.println("Left: " + cam.getLeft());
-				
-				double pixelX = (double)j / (double)(cam.getWidth() - 1) * (cam.getRight() - cam.getLeft()) + cam.getLeft();
-				double pixelY = (double)i / (double)(cam.getHeight() - 1) * (cam.getBottom() - cam.getTop()) + cam.getTop();
-				
-				
-				//System.out.println("pixelX: " + pixelX);
-				//System.out.println("pixelY: " + pixelY);
-				
-				//Code used for Class Slides
-				
-				//Generate pixel
-				RealVector pixelPt = cam.getEye();										//Eye
-				pixelPt = pixelPt.append(0);
-				pixelPt = pixelPt.add(cam.getW().mapMultiply(-1 * cam.getDistance()));	//Eye + (W * -d)
-				pixelPt = pixelPt.add(cam.getU().mapMultiply(pixelX));					//Eye + (W * -d) + (U * pixelX)
-				pixelPt = pixelPt.add(cam.getV().mapMultiply(pixelY));					//Eye + (W * -d) + (U * pixelX) + (V * pixelY)
-				pixelPt = pixelPt.getSubVector(0, 3);
-				//System.out.println("Pixel Pt: " + pixelPt);
-				
-				//Generate Ray
-				RealVector ray = pixelPt.subtract(cam.getEye());
-				ray.unitize();
-				//System.out.println("Ray: " + ray);
-				
-				//Illumination Array
-				RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
-				RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
-				iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);
-				
-			}
-		}
+		double pixelX = (double)j / (double)(cam.getWidth() - 1) * (cam.getRight() - cam.getLeft()) + cam.getLeft();
+		double pixelY = (double)i / (double)(cam.getHeight() - 1) * (cam.getBottom() - cam.getTop()) + cam.getTop();
+		
+		
+		//System.out.println("pixelX: " + pixelX);
+		//System.out.println("pixelY: " + pixelY);
+		
+		//Code used for Class Slides
+		
+		//Generate pixel
+		RealVector pixelPt = cam.getEye();										//Eye
+		pixelPt = pixelPt.append(0);
+		pixelPt = pixelPt.add(cam.getW().mapMultiply(-1 * cam.getDistance()));	//Eye + (W * -d)
+		pixelPt = pixelPt.add(cam.getU().mapMultiply(pixelX));					//Eye + (W * -d) + (U * pixelX)
+		pixelPt = pixelPt.add(cam.getV().mapMultiply(pixelY));					//Eye + (W * -d) + (U * pixelX) + (V * pixelY)
+		pixelPt = pixelPt.getSubVector(0, 3);
+		//System.out.println("Pixel Pt: " + pixelPt);
+		
+		//Generate Ray
+		RealVector ray = pixelPt.subtract(cam.getEye());
+		ray.unitize();
+		//System.out.println("Ray: " + ray);
+		
+		//Illumination Array
+		RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
+		RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
+		iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);			
 	}
 
 	//
@@ -1181,7 +1231,60 @@ public class Raytracer {
 		}
 		a.readDriver(args[0]);
 		System.out.println("Completed Reading Driver file");
-		a.render();
+		
+		a.pixelR = new int[a.cam.getHeight()][a.cam.getWidth()];
+		a.pixelG = new int[a.cam.getHeight()][a.cam.getWidth()];
+		a.pixelB = new int[a.cam.getHeight()][a.cam.getWidth()];
+		a.iValues = new RealVector[a.cam.getHeight()][a.cam.getWidth()];
+		a.tMin = Double.POSITIVE_INFINITY;
+		a.tMax = 0.0;
+		
+		
+		Test R1 = new Test("1", a);
+		Test R2 = new Test("2", a);
+		Test R3 = new Test("3", a);
+		Test R4 = new Test("4", a);
+		long startTime = System.currentTimeMillis();
+		R1.start();
+		R2.start();
+		R3.start();
+		R4.start();
+		
+		try{
+			R1.t.join();
+			R2.t.join();
+			R3.t.join();
+			R4.t.join();
+		} catch (InterruptedException e){
+			
+		}
+		
+		long endTime = System.currentTimeMillis();
+		System.out.println("Thread exceution time: " + (endTime - startTime));
+		/*
+		double pastPercent = 0.0;
+		
+		startTime = System.currentTimeMillis();
+		//Iterate through each pixel
+		for(int i = 0; i < a.cam.getHeight(); i++) {
+			for(int j = 0; j < a.cam.getWidth(); j++) {
+				
+				//Display percentage of completed pixels
+				double percent = (double)i / (double)(a.cam.getHeight() - 1);
+				percent = percent * 100;
+				DecimalFormat df = new DecimalFormat("#.##");
+				if(!df.format(percent).equals(df.format(pastPercent))){
+					if((percent - pastPercent) >= 1 | percent == 100) {
+						System.out.println("Ray Trace: " + df.format(percent) + "% Completed"); 
+						pastPercent = percent;
+					}
+				}
+				a.render(i, j);
+			}
+		}
+		endTime = System.currentTimeMillis();
+		System.out.println("Normal exceution time: " + (endTime - startTime));
+		*/
 		System.out.println("Completed Ray Tracing");
 		a.illumToRGB();
 		System.out.println("Completed Storing RGB values");
