@@ -1,5 +1,5 @@
 //Colin McDaniel
-//CS 410 Assignment #2
+//CS 410 Assignment #4
 //CSU ID: 830293766
 
 
@@ -563,7 +563,7 @@ public class Raytracer {
 						}
 					}
 				} catch (SingularMatrixException e){
-					System.err.println("SingularMatrixException: " + e.getMessage());
+					//System.err.println("SingularMatrixException: " + e.getMessage());
 				}
 			}
 		}
@@ -715,7 +715,7 @@ public class Raytracer {
 						}
 					//}
 				} catch (SingularMatrixException e){
-					System.err.println("SingularMatrixException: " + e.getMessage());
+					//System.err.println("SingularMatrixException: " + e.getMessage());
 				}
 				
 				
@@ -823,7 +823,7 @@ public class Raytracer {
 						}
 					}
 				} catch (SingularMatrixException e){
-					System.err.println("SingularMatrixException: " + e.getMessage());
+					//System.err.println("SingularMatrixException: " + e.getMessage());
 				}
 				
 				
@@ -1171,17 +1171,15 @@ public class Raytracer {
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
 		
-		//a.readDriver(args[0]);
-		
-		
-		
-		//a.readDriver("driver00.txt");
-		a.readDriver("driver03.txt");
-		//a.readDriver("driver01.txt");
-		//a.readDriver("driver02.txt");
-		
-		//a.readDriver("simface.txt");
-		
+		if(args.length < 2){
+			System.err.println("Error: Too few arguments, be sure to designate a driver file and an output file!");
+			System.exit(1);
+		}
+		if(args.length > 2){
+			System.err.println("Error: Too many arguments, be sure to only designate a driver file and an output file!");
+			System.exit(1);
+		}
+		a.readDriver(args[0]);
 		System.out.println("Completed Reading Driver file");
 		a.render();
 		System.out.println("Completed Ray Tracing");
