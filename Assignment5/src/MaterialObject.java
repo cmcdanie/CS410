@@ -3,18 +3,18 @@ import org.apache.commons.math3.linear.RealVector;
 
 public class MaterialObject {
 	
-	public String materialName;
-	public RealVector ambient;
-	public RealVector diffuse;
-	public RealVector specular;
-	public RealVector reflection;
-	public double Ns;
+	private String materialName;
+	private RealVector ambient;
+	private RealVector diffuse;
+	private RealVector specular;
+	private RealVector attenuation;
+	private double Ns;
 	
 	MaterialObject(String n){
 		ambient = new ArrayRealVector(3);
 		diffuse = new ArrayRealVector(3);
 		specular = new ArrayRealVector(3);
-		reflection = new ArrayRealVector(new double[]{1, 1, 1,}) ;
+		attenuation = new ArrayRealVector(new double[]{1, 1, 1,}) ;
 		materialName = n;
 		Ns = 0;
 	}
@@ -31,8 +31,8 @@ public class MaterialObject {
 		specular = Ks;
 	}
 	
-	public void setReflect(RealVector Kr) {
-		reflection = Kr;
+	public void setAttenuation(RealVector Kr) {
+		attenuation = Kr;
 	}
 	
 	public void setNs(double ns) {
@@ -51,8 +51,8 @@ public class MaterialObject {
 		return specular;
 	}
 	
-	public RealVector getReflect() {
-		return reflection;
+	public RealVector getAttenuation() {
+		return attenuation;
 	}
 	
 	public double getNs() {

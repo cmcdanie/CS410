@@ -14,14 +14,14 @@ import org.apache.commons.math3.linear.RealVector;
 
 public class ModelObject {
 
-	public String modelName;				//Name of model
-	public ArrayList<String> objTxt;		//List of lines of modelObject file
-	public ArrayList<double[]> vertices;	//List of vertices
-	public ArrayList<int[]> faces;			//List of faces
-	public String materialFile;					//File name of material file
-	public Map<String, MaterialObject> materials;			//List of materials found in object file
+	private String modelName;				//Name of model
+	private ArrayList<String> objTxt;		//List of lines of modelObject file
+	private ArrayList<double[]> vertices;	//List of vertices
+	private ArrayList<int[]> faces;			//List of faces
+	private String materialFile;					//File name of material file
+	private Map<String, MaterialObject> materials;			//List of materials found in object file
 	private Map<Integer, MaterialObject> faceMaterial;		//Map of face index to material name
-	public MaterialObject defaultMaterial;
+	private MaterialObject defaultMaterial;
 	
 	
 	public ModelObject(String n) throws FileNotFoundException{
@@ -143,7 +143,7 @@ public class ModelObject {
 					token[i] = Double.parseDouble(words[i + 1]);
 				}
 				RealVector Kr = new ArrayRealVector(token);
-				materials.get(currentMtl).setReflect(Kr);
+				materials.get(currentMtl).setAttenuation(Kr);;
 			}
 		}
 		

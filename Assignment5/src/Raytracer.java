@@ -664,7 +664,7 @@ public class Raytracer {
 			//Lighting for Objects
 			if(closestType.equals("object")) {
 				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt, i, j);
-				materialKr = closestObject.getFaceMaterial(faceIndex).getReflect();
+				materialKr = closestObject.getFaceMaterial(faceIndex).getAttenuation();
 			}
 			
 			//Lighting for Spheres
@@ -1220,6 +1220,8 @@ public class Raytracer {
 	//Main
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
+		
+		args[0] = "driver02.txt";
 		
 		if(args.length < 2){
 			System.err.println("Error: Too few arguments, be sure to designate a driver file and an output file!");

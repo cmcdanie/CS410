@@ -3,13 +3,15 @@ import org.apache.commons.math3.linear.RealVector;
 
 public class ModelSphere {
 	
-	public RealVector center;
-	public double r;
+	private RealVector center;
+	private double r;
 	
-	public RealVector ambient;
-	public RealVector diffuse;
-	public RealVector specular;
-	public RealVector attenuation;
+	private RealVector ambient;
+	private RealVector diffuse;
+	private RealVector specular;
+	private RealVector attenuation;
+	private RealVector opacity;
+	private double eta;
 	
 	public ModelSphere() {
 		center = new ArrayRealVector(3);
@@ -17,8 +19,7 @@ public class ModelSphere {
 		diffuse = new ArrayRealVector(3);
 		specular = new ArrayRealVector(3);
 		attenuation = new ArrayRealVector(3);
-		//setCenter(cx, cy, cz);
-		//r = radius;
+		opacity = new ArrayRealVector(3);
 	}
 	
 	public void setCenter(RealVector cntr) {
@@ -45,6 +46,14 @@ public class ModelSphere {
 		attenuation = Kr;
 	}
 	
+	public void setOpacity(RealVector Ko){
+		opacity = Ko;
+	}
+	
+	public void setEta(double indexOfReflect){
+		eta = indexOfReflect;
+	}
+	
 	public RealVector getCenter() {
 		return center;
 	}
@@ -67,5 +76,13 @@ public class ModelSphere {
 	
 	public RealVector getAttenuation() {
 		return attenuation;
+	}
+	
+	public RealVector getOpacity(){
+		return opacity;
+	}
+	
+	public double getEta(){
+		return eta;
 	}
 }
