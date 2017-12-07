@@ -653,6 +653,7 @@ public class Raytracer {
 		//Calculate Illumination
 		RealVector illumination = new ArrayRealVector(3);
 		RealVector materialKr = new ArrayRealVector(3);
+		RealVector materialKo = new ArrayRealVector(new double[] {1.0, 1.0, 1.0});
 		
 		//If no objects intersected, set illumination to background value
 		if(t == Double.POSITIVE_INFINITY){
@@ -665,17 +666,18 @@ public class Raytracer {
 			if(closestType.equals("object")) {
 				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt, i, j);
 				materialKr = closestObject.getFaceMaterial(faceIndex).getAttenuation();
+				materialKo.mapMultiplyToSelf(closestObject.getFaceMaterial(faceIndex).getOpacity());
 			}
 			
 			//Lighting for Spheres
 			else if(closestType.equals("sphere")) {
 				illumination = sphereIllumination(closestSphere, sphereIndex, normalVect, originPt, intersectPt);
 				materialKr = closestSphere.getAttenuation();
+				materialKo = closestSphere.getOpacity();
 			}
 			
-			accum = accum.add(illumination.ebeMultiply(reffatt));
+			accum = accum.add(illumination.ebeMultiply(reffatt).ebeMultiply(materialKo));
 			
-			System.out.println("Pixel[" + i + "][" + j + "]:\n\treffatt: " + reffatt);
 			
 			//Check recursion level
 			if(level > 0) {
@@ -687,8 +689,9 @@ public class Raytracer {
 				Rv = Rv.subtract(rayInv);
 				Rv.unitize();
 				
-				//Recursive call
-				accum = rayTrace(i, j, Rv, intersectPt, accum, materialKr.ebeMultiply(reffatt), level - 1);
+				//Recursive call for reflection
+				RealVector reflect = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
+				accum = accum.add(rayTrace(i, j, Rv, intersectPt, reflect, materialKr.ebeMultiply(reffatt), level - 1));
 				
 			}
 			

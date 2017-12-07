@@ -9,6 +9,7 @@ public class MaterialObject {
 	private RealVector specular;
 	private RealVector attenuation;
 	private double Ns;
+	private double Ko;
 	
 	MaterialObject(String n){
 		ambient = new ArrayRealVector(3);
@@ -39,6 +40,10 @@ public class MaterialObject {
 		Ns = ns;
 	}
 	
+	public void setOpacity(double d) {
+		Ko = d;
+	}
+	
 	public RealVector getAmbient() {
 		return ambient;
 	}
@@ -57,6 +62,10 @@ public class MaterialObject {
 	
 	public double getNs() {
 		return Ns;
+	}
+	
+	public double getOpacity() {
+		return Ko;
 	}
 	
 	public String getName() {

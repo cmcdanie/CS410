@@ -145,6 +145,10 @@ public class ModelObject {
 				RealVector Kr = new ArrayRealVector(token);
 				materials.get(currentMtl).setAttenuation(Kr);;
 			}
+			
+			else if(words[0].equals("d")){
+				materials.get(currentMtl).setOpacity(Double.parseDouble(words[1]));
+			}
 		}
 		
 		defaultMaterial = materials.get(currentMtl);
