@@ -519,7 +519,7 @@ public class Raytracer {
 		
 		//Illumination Array
 		RealVector Illum = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
-		RealVector reffatt = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
+		RealVector reffatt = new ArrayRealVector(new double[] {1.0, 1.0, 1.0});
 		iValues[i][j] = rayTrace(i, j, ray, pixelPt, Illum, reffatt, level);			
 	}
 
@@ -673,7 +673,9 @@ public class Raytracer {
 				materialKr = closestSphere.getAttenuation();
 			}
 			
-			accum = accum.add(illumination);
+			accum = accum.add(illumination.ebeMultiply(reffatt));
+			
+			System.out.println("Pixel[" + i + "][" + j + "]:\n\treffatt: " + reffatt);
 			
 			//Check recursion level
 			if(level > 0) {
@@ -1221,7 +1223,8 @@ public class Raytracer {
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
 		
-		args[0] = "driver02.txt";
+		//args[0] = "driver02.txt";
+		args[0] = "refraction_test.txt";
 		
 		if(args.length < 2){
 			System.err.println("Error: Too few arguments, be sure to designate a driver file and an output file!");
