@@ -123,6 +123,7 @@ public class Raytracer {
 	public double phongConstant = 19;
 	public double[] background;
 	public int level;
+	public double eta_outside = 1.0;
 	
 	public Raytracer(){
 		modelObjects = new LinkedList<ModelObject>();
@@ -187,6 +188,8 @@ public class Raytracer {
 						sphere.setDiffuse(new ArrayRealVector(new double[] {Double.parseDouble(words[8]), Double.parseDouble(words[9]), Double.parseDouble(words[10])}));
 						sphere.setSpecular(new ArrayRealVector(new double[] {Double.parseDouble(words[11]), Double.parseDouble(words[12]), Double.parseDouble(words[13])}));
 						sphere.setAttenuation(new ArrayRealVector(new double[] {Double.parseDouble(words[14]), Double.parseDouble(words[15]), Double.parseDouble(words[16])}));
+						sphere.setOpacity(new ArrayRealVector(new double[] {Double.parseDouble(words[17]), Double.parseDouble(words[18]), Double.parseDouble(words[19])}));
+						sphere.setEta(Double.parseDouble(words[20]));
 						modelSpheres.add(sphere);
 						break;
 					
@@ -692,13 +695,67 @@ public class Raytracer {
 				//Recursive call for reflection
 				RealVector reflect = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
 				accum = accum.add(rayTrace(i, j, Rv, intersectPt, reflect, materialKr.ebeMultiply(reffatt), level - 1));
-				
+			}
+			double materialKoSum = materialKo.getEntry(0) + materialKo.getEntry(1) + materialKo.getEntry(2);
+			if((level > 0) & (materialKoSum < 3.0)) {
+				RealVector through = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
+				if(closestType.equals("sphere")) {
+					//Find exit point and ray on sphere
+					RealVector rayInv = ray.mapMultiplyToSelf(-1);
+					RealVector[] exitRay = new RealVector[2];
+					exitRay = findSphereExit(closestSphere, rayInv, intersectPt, closestSphere.getEta(), eta_outside);
+				}
+				else {
+					
+				}
 			}
 			
 		}
 		
 		
 		return accum;
+	}
+	//Takes a ray intersection of a sphere and returns the ray that leaves the sphere after refraction occurs
+	public RealVector[] findSphereExit(ModelSphere sphere, RealVector W, RealVector originPt, double eta, double eta_outside) {
+		double t = Double.POSITIVE_INFINITY;
+		
+		RealVector intersectPt = null;
+		RealVector normalVect = null;
+		
+		double radius = sphere.getRadius();
+		RealVector center = sphere.getCenter();
+		RealVector sphereNormal = originPt.subtract(center);
+		sphereNormal.unitize();
+		RealVector T1 = refractRay(W, intersectPt, sphereNormal, eta_outside, eta);
+		
+		if((T1.getEntry(0) + T1.getEntry(1) + T1.getEntry(2)) == 0.0) {
+			return null;
+		}
+		else {
+			sphereNormal = sphereNormal.mapMultiply(-1);
+			
+		}
+		
+		RealVector[] result = new RealVector[2];
+		result[0] = new ArrayRealVector(new double[] {0.0, 0.0, 1.0});
+		return result;
+	}
+	
+	//Takes a W vector, intersect point and a normal to find the resultant refracted ray T
+	public RealVector refractRay(RealVector W, RealVector intersectPt, RealVector N, double eta1, double eta2) {
+		double etaRatio = eta1 / eta2;
+		double a = -1 * etaRatio;
+		double WdotN = W.dotProduct(N);
+		double radSq = ((etaRatio * etaRatio) * ((WdotN * WdotN) - 1)) + 1;
+		RealVector T = null;
+		if(radSq < 0.0) {
+			T = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
+		}
+		else {
+			double b = (etaRatio * WdotN) - (Math.sqrt(radSq));
+			T = W.mapMultiply(a).add(N.mapMultiply(b));
+		}
+		return T;
 	}
 	
 	//Returns true if no object or sphere in path from intersectPt to light
@@ -1226,7 +1283,7 @@ public class Raytracer {
 	public static void main(String[] args) throws FileNotFoundException {
 		Raytracer a = new Raytracer();
 		
-		//args[0] = "driver02.txt";
+		//args[0] = "driver03.txt";
 		args[0] = "refraction_test.txt";
 		
 		if(args.length < 2){
