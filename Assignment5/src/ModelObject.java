@@ -149,6 +149,10 @@ public class ModelObject {
 			else if(words[0].equals("d")){
 				materials.get(currentMtl).setOpacity(Double.parseDouble(words[1]));
 			}
+			
+			else if(words[0].equals("eta")){
+				materials.get(currentMtl).setEta(Double.parseDouble(words[1]));
+			}
 		}
 		
 		defaultMaterial = materials.get(currentMtl);

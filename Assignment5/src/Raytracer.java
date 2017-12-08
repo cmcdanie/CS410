@@ -622,6 +622,9 @@ public class Raytracer {
 		}
 		//System.out.println("\n");
 		
+		if(i == 272 & j == 278){
+			System.out.println("here");
+		}
 		
 		//Iterate through spheres
 		for(int k = 0; k < modelSpheres.size(); k++){
@@ -670,6 +673,7 @@ public class Raytracer {
 				illumination = objectIllumination(closestObject, faceIndex, normalVect, originPt, intersectPt, i, j);
 				materialKr = closestObject.getFaceMaterial(faceIndex).getAttenuation();
 				materialKo.mapMultiplyToSelf(closestObject.getFaceMaterial(faceIndex).getOpacity());
+				
 			}
 			
 			//Lighting for Spheres
@@ -680,7 +684,6 @@ public class Raytracer {
 			}
 			
 			accum = accum.add(illumination.ebeMultiply(reffatt).ebeMultiply(materialKo));
-			
 			
 			//Check recursion level
 			if(level > 0) {
@@ -694,19 +697,32 @@ public class Raytracer {
 				
 				//Recursive call for reflection
 				RealVector reflect = new ArrayRealVector(new double[]{0.0, 0.0, 0.0});
-				accum = accum.add(rayTrace(i, j, Rv, intersectPt, reflect, materialKr.ebeMultiply(reffatt), level - 1));
+				reflect = rayTrace(i, j, Rv, intersectPt, reflect, materialKr.ebeMultiply(reffatt), level - 1);
+				accum = accum.add(reffatt.ebeMultiply(materialKo).ebeMultiply(reflect));
 			}
 			double materialKoSum = materialKo.getEntry(0) + materialKo.getEntry(1) + materialKo.getEntry(2);
+			
 			if((level > 0) & (materialKoSum < 3.0)) {
 				RealVector through = new ArrayRealVector(new double[] {0.0, 0.0, 0.0});
 				if(closestType.equals("sphere")) {
 					//Find exit point and ray on sphere
-					RealVector rayInv = ray.mapMultiplyToSelf(-1);
-					RealVector[] exitRay = new RealVector[2];
-					exitRay = findSphereExit(closestSphere, rayInv, intersectPt, closestSphere.getEta(), eta_outside);
+					RealVector rayInv = ray.mapMultiply(-1);
+					RealVector[] exitRaySphere = new RealVector[2];
+					exitRaySphere = findSphereExit(i, j, closestSphere, rayInv, intersectPt, closestSphere.getEta(), eta_outside);
+					if(exitRaySphere != null){
+						through = rayTrace(i, j, exitRaySphere[1], exitRaySphere[0], through, reffatt.ebeMultiply(materialKr), level - 1);
+						accum = accum.add(reffatt.ebeMultiply(materialKo.mapMultiply(-1).mapAdd(1)).ebeMultiply(through));
+					}
 				}
 				else {
-					
+					//Find exit point and ray on object
+					RealVector rayInv = ray.mapMultiply(-1);
+					RealVector[] exitRayObject = new RealVector[2];
+					exitRayObject = this.findObjectExit(i, j, closestObject, rayInv, intersectPt, closestObject.getFaceMaterial(faceIndex).getEta(), eta_outside);
+					if(exitRayObject != null){
+						through = this.rayTrace(i, j, exitRayObject[1], exitRayObject[0], through, reffatt.ebeMultiply(materialKo), level -1);
+						accum = accum.add(reffatt.ebeMultiply(materialKo.mapMultiply(-1).mapAdd(1)).ebeMultiply(through));
+					}
 				}
 			}
 			
@@ -715,34 +731,48 @@ public class Raytracer {
 		
 		return accum;
 	}
+	
+	public RealVector[] findObjectExit(int i, int j, ModelObject object, RealVector W, RealVector intersectPt, double eta, double eta_outside){
+		//Calculate Refraction through intersectPt
+		//Iterate through faces
+		//Find closest face
+		//Solve for intersect point
+		//Make this exitPt
+		//Calculate refraction ray through this face
+		//Return exitRay and exitPt
+		
+		return null;
+	}
+	
 	//Takes a ray intersection of a sphere and returns the ray that leaves the sphere after refraction occurs
-	public RealVector[] findSphereExit(ModelSphere sphere, RealVector W, RealVector originPt, double eta, double eta_outside) {
+	public RealVector[] findSphereExit(int i, int j, ModelSphere sphere, RealVector W, RealVector intersectPt, double eta, double eta_outside) {
 		double t = Double.POSITIVE_INFINITY;
 		
-		RealVector intersectPt = null;
-		RealVector normalVect = null;
 		
-		double radius = sphere.getRadius();
 		RealVector center = sphere.getCenter();
-		RealVector sphereNormal = originPt.subtract(center);
+		RealVector sphereNormal = intersectPt.subtract(center);
 		sphereNormal.unitize();
-		RealVector T1 = refractRay(W, intersectPt, sphereNormal, eta_outside, eta);
+		RealVector T1 = refractRay(i, j, W, intersectPt, sphereNormal, eta_outside, eta);
 		
 		if((T1.getEntry(0) + T1.getEntry(1) + T1.getEntry(2)) == 0.0) {
 			return null;
 		}
 		else {
-			sphereNormal = sphereNormal.mapMultiply(-1);
-			
+			sphereNormal = center.subtract(intersectPt);
+			RealVector exitPt = T1.mapMultiply(sphereNormal.dotProduct(T1) * 2).add(intersectPt);
+			RealVector Nin = sphere.getCenter().subtract(exitPt);
+			RealVector T2 = refractRay(i, j, T1.mapMultiply(-1), exitPt, Nin, eta, eta_outside);
+			RealVector[] result = new RealVector[2];
+			result[0] = exitPt;
+			result[1] = T2;
+			return result;
 		}
 		
-		RealVector[] result = new RealVector[2];
-		result[0] = new ArrayRealVector(new double[] {0.0, 0.0, 1.0});
-		return result;
+		
 	}
 	
 	//Takes a W vector, intersect point and a normal to find the resultant refracted ray T
-	public RealVector refractRay(RealVector W, RealVector intersectPt, RealVector N, double eta1, double eta2) {
+	public RealVector refractRay(int i, int j, RealVector W, RealVector intersectPt, RealVector N, double eta1, double eta2) {
 		double etaRatio = eta1 / eta2;
 		double a = -1 * etaRatio;
 		double WdotN = W.dotProduct(N);

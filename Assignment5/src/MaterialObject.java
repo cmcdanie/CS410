@@ -10,6 +10,7 @@ public class MaterialObject {
 	private RealVector attenuation;
 	private double Ns;
 	private double Ko;
+	private double eta;
 	
 	MaterialObject(String n){
 		ambient = new ArrayRealVector(3);
@@ -44,6 +45,10 @@ public class MaterialObject {
 		Ko = d;
 	}
 	
+	public void setEta(double indexOfRefraction){
+		eta = indexOfRefraction;
+	}
+	
 	public RealVector getAmbient() {
 		return ambient;
 	}
@@ -66,6 +71,10 @@ public class MaterialObject {
 	
 	public double getOpacity() {
 		return Ko;
+	}
+	
+	public double getEta(){
+		return eta;
 	}
 	
 	public String getName() {
